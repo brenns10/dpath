@@ -1,0 +1,64 @@
+/("[^"]")+|('[^']')+/                     { fmt.Println("STRING_LITERAL"); return STRING_LITERAL }
+/[0-9]+/                                  { fmt.Println("INTEGER_LITERAL"); return INTEGER_LITERAL }
+/\.[0-9]+|[0-9]+\.[0-9]*/                 { fmt.Println("DECIMAL_LITERAL"); return DECIMAL_LITERAL }
+/(\.[0-9]+|[0-9]+\.[0-9]*)[Ee][+-][0-9]+/ { fmt.Println("DOUBLE_LITERAL"); return DOUBLE_LITERAL }
+/or/                                      { fmt.Println("OR"); return OR }
+/and/                                     { fmt.Println("AND"); return AND }
+/idiv/                                    { fmt.Println("DIVIDE"); return INTEGER_DIVIDE }
+/div/                                     { fmt.Println("DIVIDE"); return DIVIDE }
+/mod/                                     { fmt.Println("MODULUS"); return MODULUS }
+/eq/                                      { fmt.Println("VEQ"); return VEQ }
+/ne/                                      { fmt.Println("VNE"); return VNE }
+/lt/                                      { fmt.Println("VLT"); return VLT }
+/le/                                      { fmt.Println("VLE"); return VLE }
+/gt/                                      { fmt.Println("VGT"); return VGT }
+/ge/                                      { fmt.Println("VGE"); return VGE }
+/is/                                      { fmt.Println("IS"); return IS }
+/union/                                   { fmt.Println("UNION"); return UNION }
+/file/                                    { fmt.Println("FILE"); return FILE }
+/dir/                                     { fmt.Println("DIR"); return DIR }
+/to/                                      { fmt.Println("TO"); return TO }
+/::/                                      { fmt.Println("AXIS"); return AXIS }
+/[a-zA-Z_][a-zA-Z_.-]*/                   { fmt.Println("QNAME"); return QNAME }
+/[ \t\r\n]+/                              { /* skip WS */ }
+/$/                                       { fmt.Println("DOLLAR"); return DOLLAR }
+/\(/                                      { fmt.Println("LPAREN"); return LPAREN }
+/\)/                                      { fmt.Println("RPAREN"); return RPAREN }
+/\[/                                      { fmt.Println("LBRACKET"); return LBRACKET }
+/\]/                                      { fmt.Println("RBRACKET"); return RBRACKET }
+/,/                                       { fmt.Println("COMMA"); return COMMA }
+/\+/                                      { fmt.Println("PLUS"); return PLUS }
+/-/                                       { fmt.Println("MINUS"); return MINUS }
+/\*/                                      { fmt.Println("MULTIPLY"); return MULTIPLY }
+/\//                                      { fmt.Println("SLASH"); return SLASH }
+/=/                                       { fmt.Println("GEQ"); return GEQ }
+/!=/                                      { fmt.Println("GNE"); return GNE }
+/</                                       { fmt.Println("GLT"); return GLT }
+/<=/                                      { fmt.Println("GLE"); return GLE }
+/>/                                       { fmt.Println("GGT"); return GGT }
+/>=/                                      { fmt.Println("GGE"); return GGE }
+/\|/                                      { fmt.Println("UNIONSYM"); return UNIONSYM }
+/@/                                       { fmt.Println("ATTR"); return ATTR }
+/\.\./                                    { fmt.Println("DOTDOT"); return DOTDOT }
+/\./                                      { fmt.Println("DOT"); return DOT }
+//
+package main;
+import (
+    "errors"
+    "fmt"
+)
+
+var parserResult *ParseTree
+
+func Parse(input io.Reader) (*ParseTree, error) {
+    lexer := NewLexer(input)
+    if yyParse(lexer) != 0 {
+        return nil, errors.New("Parse error.")
+    }
+    return parserResult, nil
+}
+
+func ParseString(input string) (*ParseTree, error) {
+    reader := strings.NewReader(input)
+    return Parse(reader)
+}
