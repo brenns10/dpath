@@ -1,7 +1,7 @@
 /("[^"]+")+|('[^']+')+/                   { fmt.Println("STRING_LITERAL"); return STRING_LITERAL }
 /[0-9]+/                                  { fmt.Println("INTEGER_LITERAL"); return INTEGER_LITERAL }
 /\.[0-9]+|[0-9]+\.[0-9]*/                 { fmt.Println("DECIMAL_LITERAL"); return DECIMAL_LITERAL }
-/(\.[0-9]+|[0-9]+\.[0-9]*)[Ee][+-][0-9]+/ { fmt.Println("DOUBLE_LITERAL"); return DOUBLE_LITERAL }
+/(\.[0-9]+|[0-9]+\.[0-9]*)[Ee][+-]?[0-9]+/ { fmt.Println("DOUBLE_LITERAL"); return DOUBLE_LITERAL }
 /or/                                      { fmt.Println("OR"); return OR }
 /and/                                     { fmt.Println("AND"); return AND }
 /idiv/                                    { fmt.Println("INTEGER_DIVIDE"); return INTEGER_DIVIDE }
