@@ -14,6 +14,7 @@ package main
 %token OR
 %token AND
 %token DIVIDE
+%token INTEGER_DIVIDE
 %token MODULUS
 %token VEQ
 %token VNE
