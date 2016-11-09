@@ -40,11 +40,11 @@
 { return TO }
 /::/
 { return AXIS }
-/[a-zA-Z_][a-zA-Z_.-]*/
+/[a-zA-Z_][a-zA-Z0-9_.-]*/
 { return QNAME }
 /[ \t\r\n]+/
 { /* skip WS */ }
-/$/
+/\$/
 { return DOLLAR }
 /\(/
 { return LPAREN }
@@ -92,7 +92,13 @@ import (
 
 var parserResult *ParseTree
 
-func Parse(input io.Reader) (*ParseTree, error) {
+func Parse(input io.Reader) (t *ParseTree, e error) {
+    defer func () {
+        if v := recover(); v != nil {
+            t = nil
+            e = errors.New("Parse error.")
+        }
+    }()
     lexer := NewLexer(input)
     if yyParse(lexer) != 0 {
         return nil, errors.New("Parse error.")

@@ -1,7 +1,12 @@
 package main
 
-import "os"
+import (
+	"fmt"
+	"os"
+)
 
 func main() {
-	ParseString(os.Args[1])
+	if _, err := ParseString(os.Args[1]); err != nil {
+		fmt.Println(err)
+	}
 }
