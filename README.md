@@ -10,8 +10,8 @@ the DPath query below would match every PNG file in the current directory tree:
 ```
 
 Currently I have a lexer and parser implemented. The main program will attempt
-to parse the expression, outputting tokens as it parses. If no error message is
-produced, the expression parsed successfully.
+to parse the expression, outputting tokens as it parses. After parsing, it will
+output a (rather cryptic looking) parse tree, or an error.
 
 To try it, clone this repo and run the following.
 
@@ -20,20 +20,13 @@ $ go get github.com/blynn/nex
 $ go generate
 $ go build
 $ ./dpath './/file()[ends-with(name(), ".png")]'
-DOT
-SLASH
-SLASH
-FILE
-LPAREN
-RPAREN
-LBRACKET
-QNAME
-LPAREN
-QNAME
-LPAREN
-RPAREN
-COMMA
-STRING_LITERAL
-RPAREN
-RBRACKET
+PATH
+  .
+(ANY CHILD)
+  FILTER EXPRESSION:
+    file
+  FILTER BY:
+    ends-with()
+      name()
+      .png
 ```
