@@ -12,26 +12,6 @@ import (
 //go:generate nex dpath.nex
 //go:generate go tool yacc dpath.y
 
-type Context struct {
-}
-type Item interface {
-	Type() string
-}
-type DummyItem struct{}
-
-func (d *DummyItem) Type() string {
-	return "dummy"
-}
-
-type Sequence interface {
-	Next() Item
-}
-type DummySequence struct{}
-
-func (d *DummySequence) Next() Item {
-	return &DummyItem{}
-}
-
 type ParseTree interface {
 	Evaluate(ctx Context) Sequence
 	Print(to *bufio.Writer, indent int) error
