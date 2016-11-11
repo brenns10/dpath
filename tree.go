@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
+	"io"
 	"strconv"
 	"strings"
 )
@@ -17,7 +17,7 @@ ParseTree is an interface that allows us to easily print and eval code.
 */
 type ParseTree interface {
 	Evaluate(ctx *Context) Sequence
-	Print(to *bufio.Writer, indent int) error
+	Print(to io.Writer, indent int) error
 }
 
 func getIndent(indent int) string {
@@ -36,13 +36,13 @@ func newBinopTree(op string, left ParseTree, right ParseTree) *BinopTree {
 
 func (bt *BinopTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
 
-func (bt *BinopTree) Print(r *bufio.Writer, indent int) error {
+func (bt *BinopTree) Print(r io.Writer, indent int) error {
 	var e error
 	indentStr := getIndent(indent)
 	if e = bt.Left.Print(r, indent+1); e != nil {
 		return e
 	}
-	if _, e = r.WriteString(indentStr + bt.Operator + "\n"); e != nil {
+	if _, e = io.WriteString(r, indentStr+bt.Operator+"\n"); e != nil {
 		return e
 	}
 	if e = bt.Right.Print(r, indent+1); e != nil {
@@ -62,10 +62,10 @@ func newUnopTree(op string, left ParseTree) *UnopTree {
 
 func (ut *UnopTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
 
-func (ut *UnopTree) Print(r *bufio.Writer, indent int) error {
+func (ut *UnopTree) Print(r io.Writer, indent int) error {
 	var e error
 	indentStr := getIndent(indent)
-	if _, e = r.WriteString(indentStr + ut.Operator + "\n"); e != nil {
+	if _, e = io.WriteString(r, indentStr+ut.Operator+"\n"); e != nil {
 		return e
 	}
 	if e = ut.Left.Print(r, indent+1); e != nil {
@@ -126,7 +126,7 @@ func (lt *LiteralTree) Evaluate(ctx *Context) Sequence {
 	}
 }
 
-func (lt *LiteralTree) Print(r *bufio.Writer, indent int) error {
+func (lt *LiteralTree) Print(r io.Writer, indent int) error {
 	var e error
 	indentStr := getIndent(indent)
 	var output string
@@ -140,7 +140,7 @@ func (lt *LiteralTree) Print(r *bufio.Writer, indent int) error {
 	default:
 		output = lt.Type
 	}
-	if _, e = r.WriteString(indentStr + output + "\n"); e != nil {
+	if _, e = io.WriteString(r, indentStr+output+"\n"); e != nil {
 		return e
 	}
 	return nil
@@ -157,10 +157,10 @@ func newFunccallTree(name string, args []ParseTree) *FunccallTree {
 
 func (bt *FunccallTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
 
-func (ft *FunccallTree) Print(r *bufio.Writer, indent int) error {
+func (ft *FunccallTree) Print(r io.Writer, indent int) error {
 	var e error
 	indentStr := getIndent(indent)
-	if _, e = r.WriteString(indentStr + ft.Function + "()\n"); e != nil {
+	if _, e = io.WriteString(r, indentStr+ft.Function+"()\n"); e != nil {
 		return e
 	}
 	for _, t := range ft.Arguments {
@@ -180,9 +180,9 @@ func newContextItemTree() *ContextItemTree {
 
 func (bt *ContextItemTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
 
-func (t *ContextItemTree) Print(r *bufio.Writer, indent int) error {
+func (t *ContextItemTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)
-	_, e := r.WriteString(indentStr + ".\n")
+	_, e := io.WriteString(r, indentStr+".\n")
 	return e
 }
 
@@ -195,9 +195,9 @@ func newEmptySequenceTree() *EmptySequenceTree {
 
 func (bt *EmptySequenceTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
 
-func (et *EmptySequenceTree) Print(r *bufio.Writer, indent int) error {
+func (et *EmptySequenceTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)
-	_, e := r.WriteString(indentStr + "()\n")
+	_, e := io.WriteString(r, indentStr+"()\n")
 	return e
 }
 
@@ -212,17 +212,17 @@ func newFilteredSequenceTree(s ParseTree, f []ParseTree) *FilteredSequenceTree {
 
 func (bt *FilteredSequenceTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
 
-func (t *FilteredSequenceTree) Print(r *bufio.Writer, indent int) error {
+func (t *FilteredSequenceTree) Print(r io.Writer, indent int) error {
 	var e error
 	indentStr := getIndent(indent)
-	if _, e = r.WriteString(indentStr + "FILTER EXPRESSION:\n"); e != nil {
+	if _, e = io.WriteString(r, indentStr+"FILTER EXPRESSION:\n"); e != nil {
 		return e
 	}
 	if e = t.Source.Print(r, indent+1); e != nil {
 		return e
 	}
 	for _, t := range t.Filter {
-		if _, e = r.WriteString(indentStr + "FILTER BY:\n"); e != nil {
+		if _, e = io.WriteString(r, indentStr+"FILTER BY:\n"); e != nil {
 			return e
 		}
 		if e = t.Print(r, indent+1); e != nil {
@@ -242,9 +242,9 @@ func newKindTree(s string) *KindTree {
 
 func (bt *KindTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
 
-func (t *KindTree) Print(r *bufio.Writer, indent int) error {
+func (t *KindTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)
-	_, e := r.WriteString(indentStr + t.Kind + "\n")
+	_, e := io.WriteString(r, indentStr+t.Kind+"\n")
 	return e
 }
 
@@ -258,9 +258,9 @@ func newNameTree(s string) *NameTree {
 
 func (bt *NameTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
 
-func (t *NameTree) Print(r *bufio.Writer, indent int) error {
+func (t *NameTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)
-	_, e := r.WriteString(indentStr + "Name(" + t.Name + ")\n")
+	_, e := io.WriteString(r, indentStr+"Name("+t.Name+")\n")
 	return e
 }
 
@@ -274,9 +274,9 @@ func newAttrTree(s string) *AttrTree {
 
 func (bt *AttrTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
 
-func (t *AttrTree) Print(r *bufio.Writer, indent int) error {
+func (t *AttrTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)
-	_, e := r.WriteString(indentStr + "Attr(" + t.Attr + ")\n")
+	_, e := io.WriteString(r, indentStr+"Attr("+t.Attr+")\n")
 	return e
 }
 
@@ -291,10 +291,10 @@ func newAxisTree(a string, e ParseTree) *AxisTree {
 
 func (bt *AxisTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
 
-func (t *AxisTree) Print(r *bufio.Writer, indent int) error {
+func (t *AxisTree) Print(r io.Writer, indent int) error {
 	var e error
 	indentStr := getIndent(indent)
-	if _, e = r.WriteString(indentStr + "ON AXIS " + t.Axis + "\n"); e != nil {
+	if _, e = io.WriteString(r, indentStr+"ON AXIS "+t.Axis+"\n"); e != nil {
 		return e
 	}
 	return t.Expression.Print(r, indent+1)
@@ -311,19 +311,19 @@ func newPathTree(p []ParseTree, r bool) *PathTree {
 
 func (bt *PathTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
 
-func (pt *PathTree) Print(r *bufio.Writer, indent int) error {
+func (pt *PathTree) Print(r io.Writer, indent int) error {
 	var e error
 	indentStr := getIndent(indent)
 	startStr := "\n"
 	if pt.Rooted {
 		startStr = "/\n"
 	}
-	if _, e = r.WriteString(indentStr + "PATH" + startStr); e != nil {
+	if _, e = io.WriteString(r, indentStr+"PATH"+startStr); e != nil {
 		return e
 	}
 	for _, t := range pt.Path {
 		if t == nil {
-			if _, e = r.WriteString(indentStr + "(ANY CHILD)\n"); e != nil {
+			if _, e = io.WriteString(r, indentStr+"(ANY CHILD)\n"); e != nil {
 				return e
 			}
 		} else if e = t.Print(r, indent+1); e != nil {

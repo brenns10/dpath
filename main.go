@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 )
@@ -12,21 +11,17 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	w := bufio.NewWriter(os.Stdout)
-	if err = tree.Print(w, 0); err != nil {
+	if err = tree.Print(os.Stdout, 0); err != nil {
 		fmt.Println(err)
 	}
-	w.Flush()
 
-	w.WriteString("Output:\n")
+	fmt.Println("Output:")
 
 	ctx := DefaultContext()
 	seq := tree.Evaluate(ctx)
 	for seq.Next() {
-		if err = seq.Value().Print(w); err != nil {
+		if err = seq.Value().Print(os.Stdout); err != nil {
 			fmt.Println(err)
 		}
 	}
-
-	w.Flush()
 }
