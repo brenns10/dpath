@@ -3,179 +3,239 @@ package main
 %}
 
 %union {
-    tree *ParseTree
+    tree ParseTree
+    str string
+    num int
+    args []ParseTree
 }
 
-%token STRING_LITERAL
-%token INTEGER_LITERAL
-%token DECIMAL_LITERAL
-%token DOUBLE_LITERAL
+%token  <str>           STRING_LITERAL
+%token  <str>           INTEGER_LITERAL
+%token  <str>           DECIMAL_LITERAL
+%token  <str>           DOUBLE_LITERAL
+%token  <str>           QNAME
 
-%token OR
-%token AND
-%token DIVIDE
-%token INTEGER_DIVIDE
-%token MODULUS
-%token VEQ
-%token VNE
-%token VLT
-%token VLE
-%token VGT
-%token VGE
-%token IS
-%token UNION
-%token FILE
-%token DIR
-%token TO
-%token AXIS
+%token  <num>           OR
+%token  <num>           AND
+%token  <num>           DIVIDE
+%token  <num>           INTEGER_DIVIDE
+%token  <num>           MODULUS
+%token  <num>           VEQ
+%token  <num>           VNE
+%token  <num>           VLT
+%token  <num>           VLE
+%token  <num>           VGT
+%token  <num>           VGE
+%token  <num>           IS
+%token  <num>           UNION
+%token  <num>           FILE
+%token  <num>           DIR
+%token  <num>           TO
+%token  <num>           AXIS
 
-%token QNAME
+%token  <num>           DOLLAR
+%token  <num>           LPAREN
+%token  <num>           RPAREN
+%token  <num>           LBRACKET
+%token  <num>           RBRACKET
+%token  <num>           COMMA
+%token  <num>           PLUS
+%token  <num>           MINUS
+%token  <num>           MULTIPLY
+%token  <num>           SLASH
+%token  <num>           GEQ
+%token  <num>           GNE
+%token  <num>           GLT
+%token  <num>           GLE
+%token  <num>           GGT
+%token  <num>           GGE
+%token  <num>           UNIONSYM
+%token  <num>           ATTR
+%token  <num>           DOTDOT
+%token  <num>           DOT
 
-%token DOLLAR
-%token LPAREN
-%token RPAREN
-%token LBRACKET
-%token RBRACKET
-%token COMMA
-%token PLUS
-%token MINUS
-%token MULTIPLY
-%token SLASH
-%token GEQ
-%token GNE
-%token GLT
-%token GLE
-%token GGT
-%token GGE
-%token UNIONSYM
-%token ATTR
-%token DOTDOT
-%token DOT
+%type   <tree>          XPath
+%type   <tree>          Expr
+%type   <tree>          ExprSingle
+%type   <tree>          OrExpr
+%type   <tree>          AndExpr
+%type   <tree>          ComparisonExpr
+%type   <str>           ValueComp
+%type   <str>           GeneralComp
+%type   <str>           NodeComp
+%type   <tree>          RangeExpr
+%type   <tree>          AdditiveExpr
+%type   <tree>          MultiplicativeExpr
+%type   <tree>          UnaryExpr
+%type   <tree>          ValueExpr
+%type   <tree>          PathExpr
+%type   <args>          RelativePathExpr
+%type   <tree>          StepExpr
+%type   <tree>          AxisStep
+%type   <tree>          NodeStep
+%type   <tree>          NodeTest
+%type   <tree>          NameTest
+%type   <tree>          KindTest
+%type   <args>          PredicateList
+%type   <tree>          Predicate
+%type   <tree>          FilterExpr
+%type   <tree>          PrimaryExpr
+%type   <tree>          ParenthesizedExpr
+%type   <tree>          ContextItemExpr
+%type   <tree>          FunctionCall
+%type   <args>          ArgumentList
+%type   <tree>          Literal
 
 %%
-XPath: Expr;
-
-Expr: ExprSingle
-      | Expr COMMA ExprSingle
-      ;
-
-ExprSingle: OrExpr
-            ;
-
-OrExpr: AndExpr
-        | AndExpr OR AndExpr
-        ;
-
-AndExpr: ComparisonExpr
-         | ComparisonExpr AND ComparisonExpr
-         ;
-
-ComparisonExpr: RangeExpr
-                | RangeExpr ValueComp RangeExpr
-                | RangeExpr GeneralComp RangeExpr
-                | RangeExpr NodeComp RangeExpr
+XPath:          Expr {parserResult = $1}
                 ;
 
-ValueComp: VEQ | VNE | VLT | VLE | VGT | VGE;
+Expr:           ExprSingle {$$ = $1}
+        |       Expr COMMA ExprSingle
+                ;
 
-GeneralComp: GEQ | GNE | GLT | GLE | GGT | GGE;
-NodeComp: IS;
+ExprSingle:     OrExpr {$$ = $1}
+                ;
 
-RangeExpr: AdditiveExpr
-           | AdditiveExpr TO AdditiveExpr
-           ;
+OrExpr:         AndExpr {$$ = $1}
+        |       AndExpr OR AndExpr {$$ = newBinopTree("or", $1, $3)}
+                ;
 
-AdditiveExpr: MultiplicativeExpr
-              | MultiplicativeExpr PLUS MultiplicativeExpr
-              | MultiplicativeExpr MINUS MultiplicativeExpr
-              ;
+AndExpr:        ComparisonExpr {$$ = $1}
+        |       ComparisonExpr AND ComparisonExpr {$$ = newBinopTree("and", $1, $3)}
+                ;
 
-MultiplicativeExpr: UnaryExpr
-                    | UnaryExpr MULTIPLY UnaryExpr
-                    | UnaryExpr DIVIDE UnaryExpr
-                    | UnaryExpr INTEGER_DIVIDE UnaryExpr
-                    | UnaryExpr MODULUS UnaryExpr
-                    ;
+ComparisonExpr: RangeExpr {$$ = $1}
+        |       RangeExpr ValueComp RangeExpr {$$ = newBinopTree($2, $1, $3)}
+        |       RangeExpr GeneralComp RangeExpr {$$ = newBinopTree($2, $1, $3)}
+        |       RangeExpr NodeComp RangeExpr {$$ = newBinopTree($2, $1, $3)}
+                ;
 
-UnaryExpr: ValueExpr
-           | PLUS ValueExpr
-           | MINUS ValueExpr
-           ;
+ValueComp:      VEQ {$$ = "le"}
+        |       VNE {$$ = "ne"}
+        |       VLT {$$ = "lt"}
+        |       VLE {$$ = "le"}
+        |       VGT {$$ = "gt"}
+        |       VGE {$$ = "ge"}
+                ;
 
-ValueExpr: PathExpr
-           ;
+GeneralComp:    GEQ {$$ = "="}
+        |       GNE {$$ = "!="}
+        |       GLT {$$ = "<"}
+        |       GLE {$$ = "<="}
+        |       GGT {$$ = ">"}
+        |       GGE {$$ = ">="}
+                ;
 
-PathExpr: RelativePathExpr
-          | SLASH RelativePathExpr
-          | SLASH SLASH RelativePathExpr
-          ;
+NodeComp:       IS {$$ = "is"}
+                ;
 
-RelativePathExpr: StepExpr
-                  | RelativePathExpr SLASH StepExpr
-                  | RelativePathExpr SLASH SLASH StepExpr
-                  ;
+RangeExpr:      AdditiveExpr {$$ = $1}
+        |       AdditiveExpr TO AdditiveExpr {$$ = newBinopTree("to", $1, $3)}
+                ;
 
-StepExpr: AxisStep
-          | FilterExpr
-          ;
+AdditiveExpr:   MultiplicativeExpr {$$ = $1}
+        |       MultiplicativeExpr PLUS MultiplicativeExpr {$$ = newBinopTree("+", $1, $3)}
+        |       MultiplicativeExpr MINUS MultiplicativeExpr {$$ = newBinopTree("-", $1, $3)}
+                ;
 
-AxisStep: NodeStep
-          | NodeStep PredicateList
+MultiplicativeExpr:
+                UnaryExpr {$$ = $1}
+        |       UnaryExpr MULTIPLY UnaryExpr
+        |       UnaryExpr DIVIDE UnaryExpr
+        |       UnaryExpr INTEGER_DIVIDE UnaryExpr
+        |       UnaryExpr MODULUS UnaryExpr
+                ;
 
-NodeStep: QNAME AXIS NodeTest
-          | ATTR NodeTest
-          | DOTDOT
-          | NodeTest
-          ;
+UnaryExpr:      ValueExpr {$$ = $1}
+        |       PLUS ValueExpr {$$ = newUnopTree('+', $2)}
+        |       MINUS ValueExpr {$$ = newUnopTree('-', $2)}
+                ;
 
-NodeTest: KindTest
-          | NameTest
-          ;
+ValueExpr:      PathExpr {$$ = $1}
+                ;
 
-NameTest: QNAME
-          | MULTIPLY
-          ;
+PathExpr:       RelativePathExpr
+                {
+                    if len($1) == 1 {
+                        $$ = $1[0]
+                    } else {
+                        $$ = newPathTree($1, false)
+                    }
+                }
+        |       SLASH RelativePathExpr {$$ = newPathTree($2, true)}
+        |       SLASH SLASH RelativePathExpr {$$ = newPathTree(append([]ParseTree{nil}, $3...), true)}
+                ;
 
-KindTest: FILE LPAREN RPAREN
-          | DIR LPAREN RPAREN
-          ;
+RelativePathExpr:
+                StepExpr {$$ = []ParseTree{$1}}
+        |       RelativePathExpr SLASH StepExpr {$$ = append($1, $3)}
+        |       RelativePathExpr SLASH SLASH StepExpr {$$ = append($1, nil, $4)}
+                ;
 
-PredicateList: Predicate
-               | PredicateList Predicate
-               ;
+StepExpr:       AxisStep {$$ = $1}
+        |       FilterExpr {$$ = $1}
+                ;
 
-Predicate: LBRACKET Expr RBRACKET
-           ;
+AxisStep:       NodeStep {$$ = $1}
+        |       NodeStep PredicateList {$$ = newFilteredSequenceTree($1, $2)}
+                ;
 
-FilterExpr: PrimaryExpr
-            | PrimaryExpr PredicateList
-            ;
+NodeStep:       QNAME AXIS NodeTest {$$ = newAxisTree($1, $3)}
+        |       ATTR NodeTest {$$ = newAxisTree("attr", $2)}
+        |       DOTDOT {$$ = newKindTree("..")}
+        |       NodeTest {$$ = $1}
+                ;
 
-PrimaryExpr: Literal
-             | ParenthesizedExpr
-             | ContextItemExpr
-             | FunctionCall
-             ;
+NodeTest:       KindTest {$$ = $1}
+        |       NameTest {$$ = $1}
+                ;
 
-ParenthesizedExpr: LPAREN Expr RPAREN
-                   | LPAREN RPAREN
-                   ;
+NameTest:       QNAME {$$ = newNameTree($1)}
+        |       MULTIPLY {$$ = newKindTree("*")}
+                ;
 
-ContextItemExpr: DOT
-                 ;
+KindTest:       FILE LPAREN RPAREN {$$ = newKindTree("file")}
+        |       DIR LPAREN RPAREN {$$ = newKindTree("dir")}
+                ;
 
-FunctionCall: QNAME LPAREN RPAREN
-              | QNAME LPAREN ArgumentList RPAREN
-              ;
+PredicateList:  Predicate {$$ = []ParseTree{$1}}
+        |       PredicateList Predicate {$$ = append($1, $2)}
+                ;
 
-ArgumentList: ExprSingle
-              | ArgumentList COMMA ExprSingle
-              ;
+Predicate:      LBRACKET Expr RBRACKET {$$ = $2}
+                ;
 
-Literal:  STRING_LITERAL
-          | INTEGER_LITERAL
-          | DECIMAL_LITERAL
-          | DOUBLE_LITERAL
-          ;
+FilterExpr:     PrimaryExpr {$$ = $1}
+        |       PrimaryExpr PredicateList {$$ = newFilteredSequenceTree($1, $2)}
+                ;
+
+PrimaryExpr:    Literal {$$ = $1}
+        |       ParenthesizedExpr {$$ = $1}
+        |       ContextItemExpr {$$ = $1}
+        |       FunctionCall {$$ = $1}
+                ;
+
+ParenthesizedExpr:
+                LPAREN Expr RPAREN {$$ = $2}
+        |       LPAREN RPAREN {$$ = newEmptySequenceTree()}
+                ;
+
+ContextItemExpr:DOT {$$ = newContextItemTree()}
+                ;
+
+FunctionCall:   QNAME LPAREN RPAREN {$$ = newFunccallTree($1, []ParseTree{})}
+        |       QNAME LPAREN ArgumentList RPAREN {$$ = newFunccallTree($1, $3)}
+                ;
+
+ArgumentList:   ExprSingle {$$ = []ParseTree{$1}}
+        |       ArgumentList COMMA ExprSingle {$$ = append($1, $3)}
+                ;
+
+Literal:        STRING_LITERAL {$$ = newStringTree($1)}
+        |       INTEGER_LITERAL {$$ = newIntegerTree($1)}
+        |       DECIMAL_LITERAL {$$ = newDoubleTree($1)}
+        |       DOUBLE_LITERAL {$$ = newDoubleTree($1)}
+                ;
 
 %%
