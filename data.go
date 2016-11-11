@@ -1,8 +1,10 @@
 package main
 
 import (
+	"io"
 	"os"
 	"path"
+	"strconv"
 )
 
 /*
@@ -19,6 +21,7 @@ required operation is that it can tell us its type, so we can type check and
 */
 type Item interface {
 	Type() string
+	Print(w io.Writer) error
 }
 
 /*
@@ -39,6 +42,18 @@ and the current axis (by default, files+subdirs).
 type Context struct {
 	ContextItem Item
 	CurrentAxis Axis
+}
+
+func DefaultContext() *Context {
+	wd, err := os.Getwd()
+	if err != nil {
+		panic("Getwd() failed!")
+	}
+	item, err := newFileItem(wd)
+	if err != nil {
+		panic("Lstat() failed!")
+	}
+	return &Context{ContextItem: item, CurrentAxis: nil}
 }
 
 /*
@@ -62,6 +77,11 @@ func (d *DummyItem) Type() string {
 	return "dummy"
 }
 
+func (d *DummyItem) Print(w io.Writer) error {
+	_, err := io.WriteString(w, "dummy\n")
+	return err
+}
+
 /*
 An integer!
 */
@@ -70,6 +90,12 @@ type IntegerItem struct {
 }
 
 func (i *IntegerItem) Type() string { return "integer" }
+
+func (i *IntegerItem) Print(w io.Writer) error {
+	str := "integer:" + strconv.FormatInt(i.Value, 10) + "\n"
+	_, err := io.WriteString(w, str)
+	return err
+}
 
 func newIntegerItem(v int64) *IntegerItem {
 	return &IntegerItem{Value: v}
@@ -84,6 +110,12 @@ type DoubleItem struct {
 
 func (i *DoubleItem) Type() string { return "double" }
 
+func (i *DoubleItem) Print(w io.Writer) error {
+	str := "double:" + strconv.FormatFloat(i.Value, 'f', -1, 64) + "\n"
+	_, err := io.WriteString(w, str)
+	return err
+}
+
 func newDoubleItem(v float64) *DoubleItem {
 	return &DoubleItem{Value: v}
 }
@@ -96,6 +128,11 @@ type StringItem struct {
 }
 
 func (i *StringItem) Type() string { return "string" }
+
+func (i *StringItem) Print(w io.Writer) error {
+	_, err := io.WriteString(w, "string:\""+i.Value+"\"\n")
+	return err
+}
 
 func newStringItem(v string) *StringItem {
 	return &StringItem{Value: v}
@@ -110,6 +147,11 @@ type FileItem struct {
 }
 
 func (i *FileItem) Type() string { return "file" }
+
+func (i *FileItem) Print(w io.Writer) error {
+	_, err := io.WriteString(w, "file:"+i.Path+"\n")
+	return err
+}
 
 func newFileItem(absPath string) (*FileItem, error) {
 	info, err := os.Lstat(absPath)

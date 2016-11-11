@@ -17,4 +17,16 @@ func main() {
 		fmt.Println(err)
 	}
 	w.Flush()
+
+	w.WriteString("Output:\n")
+
+	ctx := DefaultContext()
+	seq := tree.Evaluate(ctx)
+	for seq.Next() {
+		if err = seq.Value().Print(w); err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	w.Flush()
 }
