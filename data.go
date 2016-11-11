@@ -1,5 +1,10 @@
 package main
 
+import (
+	"os"
+	"path"
+)
+
 /*
 This sub-package contains the interfaces and structures of the "data model".
 
@@ -58,6 +63,68 @@ func (d *DummyItem) Type() string {
 }
 
 /*
+An integer!
+*/
+type IntegerItem struct {
+	Value int64
+}
+
+func (i *IntegerItem) Type() string { return "integer" }
+
+func newIntegerItem(v int64) *IntegerItem {
+	return &IntegerItem{Value: v}
+}
+
+/*
+A double!
+*/
+type DoubleItem struct {
+	Value float64
+}
+
+func (i *DoubleItem) Type() string { return "double" }
+
+func newDoubleItem(v float64) *DoubleItem {
+	return &DoubleItem{Value: v}
+}
+
+/*
+A string!
+*/
+type StringItem struct {
+	Value string
+}
+
+func (i *StringItem) Type() string { return "string" }
+
+func newStringItem(v string) *StringItem {
+	return &StringItem{Value: v}
+}
+
+/*
+File item (could be a directory too)!
+*/
+type FileItem struct {
+	Path string
+	Info os.FileInfo
+}
+
+func (i *FileItem) Type() string { return "file" }
+
+func newFileItem(absPath string) (*FileItem, error) {
+	info, err := os.Lstat(absPath)
+	if err != nil {
+		return nil, err
+	}
+	return &FileItem{Path: absPath, Info: info}, nil
+}
+
+func newFileItemFromInfo(info os.FileInfo, parent string) *FileItem {
+	absPath := path.Join(parent, info.Name())
+	return &FileItem{Path: absPath, Info: info}
+}
+
+/*
 A "dummy" implementation of a sequence for stub implementations.
 */
 type DummySequence struct{}
@@ -68,4 +135,36 @@ func (d *DummySequence) Value() Item {
 
 func (d *DummySequence) Next() bool {
 	return false
+}
+
+/*
+WrapperSequence wraps a slice of Items, potentially a slice of one.
+*/
+type WrapperSequence struct {
+	Wrapped []Item
+	Index   int
+}
+
+func newWrapperSequence(seq []Item) *WrapperSequence {
+	return &WrapperSequence{Wrapped: seq, Index: -1}
+}
+
+func newSingletonSequence(item Item) *WrapperSequence {
+	return &WrapperSequence{Wrapped: []Item{item}, Index: -1}
+}
+
+func newEmptySequence() *WrapperSequence {
+	return &WrapperSequence{Wrapped: []Item{}, Index: -1}
+}
+
+func (s *WrapperSequence) Value() Item {
+	if s.Index < 0 || s.Index >= len(s.Wrapped) {
+		panic("Accessing sequence out-of-bounds.")
+	}
+	return s.Wrapped[s.Index]
+}
+
+func (s *WrapperSequence) Next() bool {
+	s.Index++
+	return s.Index < len(s.Wrapped)
 }
