@@ -148,8 +148,8 @@ MultiplicativeExpr:
                 ;
 
 UnaryExpr:      ValueExpr {$$ = $1}
-        |       PLUS ValueExpr {$$ = newUnopTree('+', $2)}
-        |       MINUS ValueExpr {$$ = newUnopTree('-', $2)}
+        |       PLUS ValueExpr {$$ = newUnopTree("+", $2)}
+        |       MINUS ValueExpr {$$ = newUnopTree("-", $2)}
                 ;
 
 ValueExpr:      PathExpr {$$ = $1}

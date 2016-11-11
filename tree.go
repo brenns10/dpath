@@ -1,9 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
-	//	"io"
 	"strconv"
+	"strings"
 )
 
 // The following comments instruct go's build system on how to generate
@@ -33,7 +34,11 @@ func (d *DummySequence) Next() Item {
 
 type ParseTree interface {
 	Evaluate(ctx Context) Sequence
-	//	Print(to io.Writer) error
+	Print(to *bufio.Writer, indent int) error
+}
+
+func getIndent(indent int) string {
+	return strings.Repeat("  ", indent)
 }
 
 type BinopTree struct {
@@ -48,16 +53,43 @@ func newBinopTree(op string, left ParseTree, right ParseTree) *BinopTree {
 
 func (bt *BinopTree) Evaluate(ctx Context) Sequence { return &DummySequence{} }
 
+func (bt *BinopTree) Print(r *bufio.Writer, indent int) error {
+	var e error
+	indentStr := getIndent(indent)
+	if e = bt.Left.Print(r, indent+1); e != nil {
+		return e
+	}
+	if _, e = r.WriteString(indentStr + bt.Operator + "\n"); e != nil {
+		return e
+	}
+	if e = bt.Right.Print(r, indent+1); e != nil {
+		return e
+	}
+	return nil
+}
+
 type UnopTree struct {
-	Operator rune
+	Operator string
 	Left     ParseTree
 }
 
-func newUnopTree(op rune, left ParseTree) *UnopTree {
+func newUnopTree(op string, left ParseTree) *UnopTree {
 	return &UnopTree{Operator: op, Left: left}
 }
 
-func (bt *UnopTree) Evaluate(ctx Context) Sequence { return &DummySequence{} }
+func (ut *UnopTree) Evaluate(ctx Context) Sequence { return &DummySequence{} }
+
+func (ut *UnopTree) Print(r *bufio.Writer, indent int) error {
+	var e error
+	indentStr := getIndent(indent)
+	if _, e = r.WriteString(indentStr + ut.Operator + "\n"); e != nil {
+		return e
+	}
+	if e = ut.Left.Print(r, indent+1); e != nil {
+		return e
+	}
+	return nil
+}
 
 type LiteralTree struct {
 	Type          string
@@ -95,10 +127,30 @@ func newStringTree(str string) *LiteralTree {
 
 func newDoubleTree(num string) *LiteralTree {
 	flt, _ := strconv.ParseFloat(num, 64)
-	return &LiteralTree{Type: "int", DoubleValue: flt}
+	return &LiteralTree{Type: "double", DoubleValue: flt}
 }
 
 func (bt *LiteralTree) Evaluate(ctx Context) Sequence { return &DummySequence{} }
+
+func (lt *LiteralTree) Print(r *bufio.Writer, indent int) error {
+	var e error
+	indentStr := getIndent(indent)
+	var output string
+	switch lt.Type {
+	case "string":
+		output = lt.StringValue
+	case "int":
+		output = strconv.FormatInt(lt.IntegerValue, 10)
+	case "double":
+		output = strconv.FormatFloat(lt.DoubleValue, 'f', -1, 64)
+	default:
+		output = lt.Type
+	}
+	if _, e = r.WriteString(indentStr + output + "\n"); e != nil {
+		return e
+	}
+	return nil
+}
 
 type FunccallTree struct {
 	Function  string
@@ -111,6 +163,20 @@ func newFunccallTree(name string, args []ParseTree) *FunccallTree {
 
 func (bt *FunccallTree) Evaluate(ctx Context) Sequence { return &DummySequence{} }
 
+func (ft *FunccallTree) Print(r *bufio.Writer, indent int) error {
+	var e error
+	indentStr := getIndent(indent)
+	if _, e = r.WriteString(indentStr + ft.Function + "()\n"); e != nil {
+		return e
+	}
+	for _, t := range ft.Arguments {
+		if e = t.Print(r, indent+1); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
 type ContextItemTree struct {
 }
 
@@ -120,6 +186,12 @@ func newContextItemTree() *ContextItemTree {
 
 func (bt *ContextItemTree) Evaluate(ctx Context) Sequence { return &DummySequence{} }
 
+func (t *ContextItemTree) Print(r *bufio.Writer, indent int) error {
+	indentStr := getIndent(indent)
+	_, e := r.WriteString(indentStr + ".\n")
+	return e
+}
+
 type EmptySequenceTree struct {
 }
 
@@ -128,6 +200,12 @@ func newEmptySequenceTree() *EmptySequenceTree {
 }
 
 func (bt *EmptySequenceTree) Evaluate(ctx Context) Sequence { return &DummySequence{} }
+
+func (et *EmptySequenceTree) Print(r *bufio.Writer, indent int) error {
+	indentStr := getIndent(indent)
+	_, e := r.WriteString(indentStr + "()\n")
+	return e
+}
 
 type FilteredSequenceTree struct {
 	Source ParseTree
@@ -140,6 +218,26 @@ func newFilteredSequenceTree(s ParseTree, f []ParseTree) *FilteredSequenceTree {
 
 func (bt *FilteredSequenceTree) Evaluate(ctx Context) Sequence { return &DummySequence{} }
 
+func (t *FilteredSequenceTree) Print(r *bufio.Writer, indent int) error {
+	var e error
+	indentStr := getIndent(indent)
+	if _, e = r.WriteString(indentStr + "FILTER EXPRESSION:\n"); e != nil {
+		return e
+	}
+	if e = t.Source.Print(r, indent+1); e != nil {
+		return e
+	}
+	for _, t := range t.Filter {
+		if _, e = r.WriteString(indentStr + "FILTER BY:\n"); e != nil {
+			return e
+		}
+		if e = t.Print(r, indent+1); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
 type KindTree struct {
 	Kind string
 }
@@ -149,6 +247,12 @@ func newKindTree(s string) *KindTree {
 }
 
 func (bt *KindTree) Evaluate(ctx Context) Sequence { return &DummySequence{} }
+
+func (t *KindTree) Print(r *bufio.Writer, indent int) error {
+	indentStr := getIndent(indent)
+	_, e := r.WriteString(indentStr + t.Kind + "\n")
+	return e
+}
 
 type NameTree struct {
 	Name string
@@ -160,6 +264,12 @@ func newNameTree(s string) *NameTree {
 
 func (bt *NameTree) Evaluate(ctx Context) Sequence { return &DummySequence{} }
 
+func (t *NameTree) Print(r *bufio.Writer, indent int) error {
+	indentStr := getIndent(indent)
+	_, e := r.WriteString(indentStr + "Name(" + t.Name + ")\n")
+	return e
+}
+
 type AttrTree struct {
 	Attr string
 }
@@ -169,6 +279,12 @@ func newAttrTree(s string) *AttrTree {
 }
 
 func (bt *AttrTree) Evaluate(ctx Context) Sequence { return &DummySequence{} }
+
+func (t *AttrTree) Print(r *bufio.Writer, indent int) error {
+	indentStr := getIndent(indent)
+	_, e := r.WriteString(indentStr + "Attr(" + t.Attr + ")\n")
+	return e
+}
 
 type AxisTree struct {
 	Axis       string
@@ -181,6 +297,15 @@ func newAxisTree(a string, e ParseTree) *AxisTree {
 
 func (bt *AxisTree) Evaluate(ctx Context) Sequence { return &DummySequence{} }
 
+func (t *AxisTree) Print(r *bufio.Writer, indent int) error {
+	var e error
+	indentStr := getIndent(indent)
+	if _, e = r.WriteString(indentStr + "ON AXIS " + t.Axis + "\n"); e != nil {
+		return e
+	}
+	return t.Expression.Print(r, indent+1)
+}
+
 type PathTree struct {
 	Path   []ParseTree
 	Rooted bool
@@ -191,3 +316,25 @@ func newPathTree(p []ParseTree, r bool) *PathTree {
 }
 
 func (bt *PathTree) Evaluate(ctx Context) Sequence { return &DummySequence{} }
+
+func (pt *PathTree) Print(r *bufio.Writer, indent int) error {
+	var e error
+	indentStr := getIndent(indent)
+	startStr := "\n"
+	if pt.Rooted {
+		startStr = "/\n"
+	}
+	if _, e = r.WriteString(indentStr + "PATH" + startStr); e != nil {
+		return e
+	}
+	for _, t := range pt.Path {
+		if t == nil {
+			if _, e = r.WriteString(indentStr + "/\n"); e != nil {
+				return e
+			}
+		} else if e = t.Print(r, indent+1); e != nil {
+			return e
+		}
+	}
+	return nil
+}
