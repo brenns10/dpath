@@ -329,7 +329,7 @@ func (pt *PathTree) Print(r *bufio.Writer, indent int) error {
 	}
 	for _, t := range pt.Path {
 		if t == nil {
-			if _, e = r.WriteString(indentStr + "/\n"); e != nil {
+			if _, e = r.WriteString(indentStr + "(ANY CHILD)\n"); e != nil {
 				return e
 			}
 		} else if e = t.Print(r, indent+1); e != nil {
