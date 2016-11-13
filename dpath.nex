@@ -1,4 +1,4 @@
-/("[^"]+")+|('[^']+')+/
+/("[^"]*")+|('[^']*')+/
 { lval.str = yylex.Text(); return STRING_LITERAL }
 /[0-9]+/
 { lval.str = yylex.Text(); return INTEGER_LITERAL }
