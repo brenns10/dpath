@@ -21,6 +21,12 @@ func assertSingleton(t *testing.T, seq Sequence) Item {
 	return item
 }
 
+func assertEmptySequence(t *testing.T, seq Sequence) {
+	_, ok := seq.(*DummySequence)
+	assert.False(t, ok)
+	assert.False(t, seq.Next())
+}
+
 func TestIntegerLiteral(t *testing.T) {
 	seq := assertEvaluates(t, "1989")
 	item := assertSingleton(t, seq)
@@ -59,4 +65,9 @@ func TestStringEscapes(t *testing.T) {
 	assert.Equal(t, item.Type(), TYPE_STRING)
 	stringItem := item.(*StringItem)
 	assert.Equal(t, "bar\"", stringItem.Value)
+}
+
+func TestEmptySequence(t *testing.T) {
+	seq := assertEvaluates(t, "()")
+	assertEmptySequence(t, seq)
 }

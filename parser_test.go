@@ -32,7 +32,7 @@ func assertBinop(t *testing.T, s string) *BinopTree {
 	return bt
 }
 
-func assertEmptySequence(t *testing.T, s string) *EmptySequenceTree {
+func assertEmptySequenceTree(t *testing.T, s string) *EmptySequenceTree {
 	tree := assertParses(t, s)
 	bt, ok := tree.(*EmptySequenceTree)
 	assert.True(t, ok)
@@ -45,7 +45,7 @@ func TestSimpleExpressionsParse(t *testing.T) {
 	assertLiteral(t, "1.0E-1")
 	assertLiteral(t, "'yo'")
 	assertQName(t, "identifier")
-	assertEmptySequence(t, "()")
+	assertEmptySequenceTree(t, "()")
 }
 
 func TestRangeExpressions(t *testing.T) {

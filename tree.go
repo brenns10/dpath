@@ -369,7 +369,9 @@ func newEmptySequenceTree() *EmptySequenceTree {
 	return &EmptySequenceTree{}
 }
 
-func (bt *EmptySequenceTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
+func (bt *EmptySequenceTree) Evaluate(ctx *Context) (Sequence, error) {
+	return newEmptySequence(), nil
+}
 
 func (et *EmptySequenceTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)
