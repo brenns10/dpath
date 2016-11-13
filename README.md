@@ -9,9 +9,9 @@ the DPath query below would match every PNG file in the current directory tree:
 .//file()[ends-with(name(), ".png")]
 ```
 
-Currently I have a lexer and parser implemented. The main program will attempt
-to parse the expression, outputting tokens as it parses. After parsing, it will
-output a (rather cryptic looking) parse tree, or an error.
+Currently I have a lexer, parser, and support for evaluating basic arithmetic
+expressions. The main program takes a DPath expression as its first argument and
+outputs a parse tree followed by the result of evaluating the expression.
 
 To try it, clone this repo and run the following.
 
@@ -19,14 +19,13 @@ To try it, clone this repo and run the following.
 $ go get github.com/blynn/nex
 $ go generate
 $ go build
-$ ./dpath './/file()[ends-with(name(), ".png")]'
-PATH
-  .
-(ANY CHILD)
-  FILTER EXPRESSION:
-    file
-  FILTER BY:
-    ends-with()
-      name()
-      .png
+$ ./dpath '1 * (3 - 1)'
+PARSE TREE:
+  1
+*
+    3
+  -
+    1
+OUTPUT:
+integer:2
 ```
