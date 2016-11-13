@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -13,10 +15,75 @@ import (
 //go:generate go tool yacc dpath.y
 
 /*
+A utility function that returns a single item in a sequence, raising an error
+if there are zero or >1 items in the sequence.
+*/
+func getSingleItem(s Sequence) (Item, error) {
+	if !s.Next() {
+		return nil, errors.New("Expected one value, found none.")
+	}
+	item := s.Value()
+	if s.Next() {
+		return nil, errors.New("Too many values provided to expression.")
+	}
+	return item, nil
+}
+
+/*
+Return integer value, if you're certain it's an integer.
+Will panic if you're wrong.
+*/
+func getInteger(i Item) int64 {
+	it := i.(*IntegerItem)
+	return it.Value
+}
+
+/*
+Return float value, if you're certain it's a float.
+Will panic if you're wrong.
+*/
+func getFloat(i Item) float64 {
+	it := i.(*DoubleItem)
+	return it.Value
+}
+
+/*
+Return numeric value as float, if you're certain it's numeric (i.e. integer
+or double).
+Will panic if you're wrong.
+*/
+func getNumericAsFloat(i Item) float64 {
+	if i.Type() == "integer" {
+		return float64(getInteger(i))
+	} else {
+		return getFloat(i)
+	}
+}
+
+/*
+Utility function for checking that each argument is one of a list of types.
+The first argument is a slice of string type names. The remaining arguments are
+DPath items to be type checked. Returns false if any item has type not included
+in the type list. Otherwise returns true.
+*/
+func typeCheck(types []string, args ...Item) bool {
+OUTER:
+	for _, arg := range args {
+		for _, typ := range types {
+			if arg.Type() == typ {
+				continue OUTER
+			}
+		}
+		return false
+	}
+	return true
+}
+
+/*
 ParseTree is an interface that allows us to easily print and eval code.
 */
 type ParseTree interface {
-	Evaluate(ctx *Context) Sequence
+	Evaluate(ctx *Context) (Sequence, error)
 	Print(to io.Writer, indent int) error
 }
 
@@ -34,7 +101,114 @@ func newBinopTree(op string, left ParseTree, right ParseTree) *BinopTree {
 	return &BinopTree{Operator: op, Left: left, Right: right}
 }
 
-func (bt *BinopTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
+/*
+Utility function for binary arithmetic operators. Performs boilerplate
+type checking. Takes two items and a function to call when both are integers,
+as well as a function to call when one is a double.
+*/
+func evalArithmetic(left Item, right Item,
+	bothInt func(l, r int64) Item,
+	otherwise func(l, r float64) Item,
+) (Sequence, error) {
+	// Ensure that both arguments are numeric.
+	types := []string{"integer", "double"}
+	if !typeCheck(types, left, right) {
+		errMsg := "Expected arguments of type integer or double, got "
+		errMsg += left.Type() + " and " + right.Type() + "."
+		return nil, errors.New(errMsg)
+	}
+	// When both arguments are integers, do integer addition.
+	if typeCheck([]string{"integer"}, left, right) {
+		res := bothInt(getInteger(left), getInteger(right))
+		return newSingletonSequence(res), nil
+	}
+	// Otherwise, up-cast to double.
+	res := otherwise(getNumericAsFloat(left), getNumericAsFloat(right))
+	return newSingletonSequence(res), nil
+}
+
+func evalPlus(left Item, right Item) (Sequence, error) {
+	return evalArithmetic(
+		left, right,
+		func(l, r int64) Item { return newIntegerItem(l + r) },
+		func(l, r float64) Item { return newDoubleItem(l + r) },
+	)
+}
+
+func evalMinus(left, right Item) (Sequence, error) {
+	return evalArithmetic(
+		left, right,
+		func(l, r int64) Item { return newIntegerItem(l - r) },
+		func(l, r float64) Item { return newDoubleItem(l - r) },
+	)
+}
+
+func evalMultiply(left, right Item) (Sequence, error) {
+	return evalArithmetic(
+		left, right,
+		func(l, r int64) Item { return newIntegerItem(l * r) },
+		func(l, r float64) Item { return newDoubleItem(l * r) },
+	)
+}
+
+func evalDivide(left, right Item) (Sequence, error) {
+	return evalArithmetic(
+		left, right,
+		func(l, r int64) Item { return newDoubleItem(float64(l) / float64(r)) },
+		func(l, r float64) Item { return newDoubleItem(l / r) },
+	)
+}
+
+func evalIntegerDivision(left, right Item) (Sequence, error) {
+	return evalArithmetic(
+		left, right,
+		func(l, r int64) Item { return newIntegerItem(l / r) },
+		func(l, r float64) Item { return newIntegerItem(int64(l / r)) },
+	)
+}
+
+func evalModulus(left, right Item) (Sequence, error) {
+	return evalArithmetic(
+		left, right,
+		func(l, r int64) Item { return newIntegerItem(l % r) },
+		func(l, r float64) Item { return newDoubleItem(math.Mod(l, r)) },
+	)
+}
+
+func (bt *BinopTree) Evaluate(ctx *Context) (Sequence, error) {
+	var left, right Sequence
+	var leftItem, rightItem Item
+	var err error
+	if left, err = bt.Left.Evaluate(ctx); err != nil {
+		return nil, err
+	}
+	if right, err = bt.Right.Evaluate(ctx); err != nil {
+		return nil, err
+	}
+	if leftItem, err = getSingleItem(left); err != nil {
+		return nil, err
+	}
+	if rightItem, err = getSingleItem(right); err != nil {
+		return nil, err
+	}
+
+	switch bt.Operator {
+	case "+":
+		return evalPlus(leftItem, rightItem)
+	case "-":
+		return evalMinus(leftItem, rightItem)
+	case "*":
+		return evalMultiply(leftItem, rightItem)
+	case "div":
+		return evalDivide(leftItem, rightItem)
+	case "idiv":
+		return evalIntegerDivision(leftItem, rightItem)
+	case "mod":
+		return evalModulus(leftItem, rightItem)
+	default:
+		return nil, errors.New("not implemented")
+	}
+}
 
 func (bt *BinopTree) Print(r io.Writer, indent int) error {
 	var e error
@@ -60,7 +234,9 @@ func newUnopTree(op string, left ParseTree) *UnopTree {
 	return &UnopTree{Operator: op, Left: left}
 }
 
-func (ut *UnopTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
+func (ut *UnopTree) Evaluate(ctx *Context) (Sequence, error) {
+	return &DummySequence{}, nil
+}
 
 func (ut *UnopTree) Print(r io.Writer, indent int) error {
 	var e error
@@ -113,16 +289,16 @@ func newDoubleTree(num string) *LiteralTree {
 	return &LiteralTree{Type: "double", DoubleValue: flt}
 }
 
-func (lt *LiteralTree) Evaluate(ctx *Context) Sequence {
+func (lt *LiteralTree) Evaluate(ctx *Context) (Sequence, error) {
 	switch lt.Type {
 	case "string":
-		return newSingletonSequence(newStringItem(lt.StringValue))
+		return newSingletonSequence(newStringItem(lt.StringValue)), nil
 	case "integer":
-		return newSingletonSequence(newIntegerItem(lt.IntegerValue))
+		return newSingletonSequence(newIntegerItem(lt.IntegerValue)), nil
 	case "double":
-		return newSingletonSequence(newDoubleItem(lt.DoubleValue))
+		return newSingletonSequence(newDoubleItem(lt.DoubleValue)), nil
 	default:
-		return newEmptySequence()
+		return newEmptySequence(), nil
 	}
 }
 
@@ -155,7 +331,7 @@ func newFunccallTree(name string, args []ParseTree) *FunccallTree {
 	return &FunccallTree{Function: name, Arguments: args}
 }
 
-func (bt *FunccallTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
+func (bt *FunccallTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
 
 func (ft *FunccallTree) Print(r io.Writer, indent int) error {
 	var e error
@@ -178,7 +354,7 @@ func newContextItemTree() *ContextItemTree {
 	return &ContextItemTree{}
 }
 
-func (bt *ContextItemTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
+func (bt *ContextItemTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
 
 func (t *ContextItemTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)
@@ -193,7 +369,7 @@ func newEmptySequenceTree() *EmptySequenceTree {
 	return &EmptySequenceTree{}
 }
 
-func (bt *EmptySequenceTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
+func (bt *EmptySequenceTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
 
 func (et *EmptySequenceTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)
@@ -210,7 +386,7 @@ func newFilteredSequenceTree(s ParseTree, f []ParseTree) *FilteredSequenceTree {
 	return &FilteredSequenceTree{Source: s, Filter: f}
 }
 
-func (bt *FilteredSequenceTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
+func (bt *FilteredSequenceTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
 
 func (t *FilteredSequenceTree) Print(r io.Writer, indent int) error {
 	var e error
@@ -240,7 +416,7 @@ func newKindTree(s string) *KindTree {
 	return &KindTree{Kind: s}
 }
 
-func (bt *KindTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
+func (bt *KindTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
 
 func (t *KindTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)
@@ -256,7 +432,7 @@ func newNameTree(s string) *NameTree {
 	return &NameTree{Name: s}
 }
 
-func (bt *NameTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
+func (bt *NameTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
 
 func (t *NameTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)
@@ -272,7 +448,7 @@ func newAttrTree(s string) *AttrTree {
 	return &AttrTree{Attr: s}
 }
 
-func (bt *AttrTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
+func (bt *AttrTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
 
 func (t *AttrTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)
@@ -289,7 +465,7 @@ func newAxisTree(a string, e ParseTree) *AxisTree {
 	return &AxisTree{Axis: a, Expression: e}
 }
 
-func (bt *AxisTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
+func (bt *AxisTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
 
 func (t *AxisTree) Print(r io.Writer, indent int) error {
 	var e error
@@ -309,7 +485,7 @@ func newPathTree(p []ParseTree, r bool) *PathTree {
 	return &PathTree{Path: p, Rooted: r}
 }
 
-func (bt *PathTree) Evaluate(ctx *Context) Sequence { return &DummySequence{} }
+func (bt *PathTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
 
 func (pt *PathTree) Print(r io.Writer, indent int) error {
 	var e error

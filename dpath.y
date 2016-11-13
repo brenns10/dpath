@@ -141,10 +141,10 @@ AdditiveExpr:   MultiplicativeExpr {$$ = $1}
 
 MultiplicativeExpr:
                 UnaryExpr {$$ = $1}
-        |       UnaryExpr MULTIPLY UnaryExpr
-        |       UnaryExpr DIVIDE UnaryExpr
-        |       UnaryExpr INTEGER_DIVIDE UnaryExpr
-        |       UnaryExpr MODULUS UnaryExpr
+        |       UnaryExpr MULTIPLY UnaryExpr {$$ = newBinopTree("*", $1, $3)}
+        |       UnaryExpr DIVIDE UnaryExpr {$$ = newBinopTree("div", $1, $3)}
+        |       UnaryExpr INTEGER_DIVIDE UnaryExpr {$$ = newBinopTree("idiv", $1, $3)}
+        |       UnaryExpr MODULUS UnaryExpr {$$ = newBinopTree("mod", $1, $3)}
                 ;
 
 UnaryExpr:      ValueExpr {$$ = $1}

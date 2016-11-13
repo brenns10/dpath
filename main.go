@@ -18,7 +18,11 @@ func main() {
 	fmt.Println("Output:")
 
 	ctx := DefaultContext()
-	seq := tree.Evaluate(ctx)
+	seq, err := tree.Evaluate(ctx)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	for seq.Next() {
 		if err = seq.Value().Print(os.Stdout); err != nil {
 			fmt.Println(err)

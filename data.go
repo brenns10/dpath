@@ -168,6 +168,8 @@ func newFileItemFromInfo(info os.FileInfo, parent string) *FileItem {
 
 /*
 A "dummy" implementation of a sequence for stub implementations.
+It looks like it will yield a dummy item, but really it's empty since Next()
+always returns false.
 */
 type DummySequence struct{}
 
