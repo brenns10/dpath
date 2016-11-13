@@ -172,3 +172,20 @@ func TestModulusDouble(t *testing.T) {
 		assert.Equal(t, float64(1.0), doubleItem.Value)
 	}
 }
+
+func TestIncorrectTypesFail(t *testing.T) {
+	cases := []string{
+		"1 + 'foo'",
+		"1 - ()",
+		"'str' div 7.3",
+		"'blah' * 2",
+		"'hello' idiv 7",
+		"'bye' mod 3",
+	}
+	for _, uut := range cases {
+		tree := assertParses(t, uut)
+		ctx := DefaultContext()
+		_, err := tree.Evaluate(ctx)
+		assert.Error(t, err)
+	}
+}
