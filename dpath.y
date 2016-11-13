@@ -111,7 +111,7 @@ ComparisonExpr: RangeExpr {$$ = $1}
         |       RangeExpr NodeComp RangeExpr {$$ = newBinopTree($2, $1, $3)}
                 ;
 
-ValueComp:      VEQ {$$ = "le"}
+ValueComp:      VEQ {$$ = "eq"}
         |       VNE {$$ = "ne"}
         |       VLT {$$ = "lt"}
         |       VLE {$$ = "le"}
