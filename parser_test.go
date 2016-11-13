@@ -5,29 +5,84 @@ import (
 	"testing"
 )
 
-func assertParses(t *testing.T, s string) {
-	_, e := ParseString(s)
+func assertParses(t *testing.T, s string) ParseTree {
+	tree, e := ParseString(s)
 	assert.Nil(t, e)
+	return tree
+}
+
+func assertLiteral(t *testing.T, s string) *LiteralTree {
+	tree := assertParses(t, s)
+	lt, ok := tree.(*LiteralTree)
+	assert.True(t, ok)
+	return lt
+}
+
+func assertQName(t *testing.T, s string) *NameTree {
+	tree := assertParses(t, s)
+	nt, ok := tree.(*NameTree)
+	assert.True(t, ok)
+	return nt
+}
+
+func assertBinop(t *testing.T, s string) *BinopTree {
+	tree := assertParses(t, s)
+	bt, ok := tree.(*BinopTree)
+	assert.True(t, ok)
+	return bt
+}
+
+func assertEmptySequence(t *testing.T, s string) *EmptySequenceTree {
+	tree := assertParses(t, s)
+	bt, ok := tree.(*EmptySequenceTree)
+	assert.True(t, ok)
+	return bt
 }
 
 func TestSimpleExpressionsParse(t *testing.T) {
-	assertParses(t, "1")
-	assertParses(t, "1.23")
-	assertParses(t, "1.0E-1")
-	assertParses(t, "'yo'")
-	assertParses(t, "identifier")
-	assertParses(t, "()")
-	assertParses(t, "1, 2")
+	assertLiteral(t, "1")
+	assertLiteral(t, "1.23")
+	assertLiteral(t, "1.0E-1")
+	assertLiteral(t, "'yo'")
+	assertQName(t, "identifier")
+	assertEmptySequence(t, "()")
 }
 
 func TestRangeExpressions(t *testing.T) {
-	assertParses(t, "1 + 1 to 2 + 2")
-	assertParses(t, "//* to //*")
+	bt := assertBinop(t, "1 + 1 to 2 + 2")
+	assert.Equal(t, bt.Operator, "to")
+
+	assert.IsType(t, (*BinopTree)(nil), bt.Left)
+	left := bt.Left.(*BinopTree)
+	assert.IsType(t, (*LiteralTree)(nil), left.Left)
+	assert.IsType(t, (*LiteralTree)(nil), left.Right)
+
+	assert.IsType(t, (*BinopTree)(nil), bt.Right)
+	right := bt.Left.(*BinopTree)
+	assert.IsType(t, (*LiteralTree)(nil), right.Left)
+	assert.IsType(t, (*LiteralTree)(nil), right.Right)
 }
 
 func TestLogicExpressions(t *testing.T) {
-	assertParses(t, "x = 5 and 3 + 3 eq 6")
-	assertParses(t, "10 or .")
+	bt := assertBinop(t, "x = 5 and 3 + 3 eq 6")
+	assert.Equal(t, bt.Operator, "and")
+
+	assert.IsType(t, (*BinopTree)(nil), bt.Left)
+	l := bt.Left.(*BinopTree)
+	assert.Equal(t, "=", l.Operator)
+	assert.IsType(t, (*NameTree)(nil), l.Left)
+	assert.IsType(t, (*LiteralTree)(nil), l.Right)
+
+	assert.IsType(t, (*BinopTree)(nil), bt.Right)
+	r := bt.Right.(*BinopTree)
+	assert.Equal(t, "eq", r.Operator)
+	assert.IsType(t, (*LiteralTree)(nil), r.Right)
+	assert.IsType(t, (*BinopTree)(nil), r.Left)
+	rl := r.Left.(*BinopTree)
+	assert.Equal(t, "+", rl.Operator)
+	assert.IsType(t, (*LiteralTree)(nil), rl.Left)
+	assert.IsType(t, (*LiteralTree)(nil), rl.Right)
+
 }
 
 func TestComparisons(t *testing.T) {
@@ -46,8 +101,42 @@ func TestComparisons(t *testing.T) {
 	assertParses(t, "/Blah is .")
 }
 
-func TestStepExprs(t *testing.T) {
-	assertParses(t, "/file()")
-	assertParses(t, "//dir()")
-	assertParses(t, "file()[@owner = 'stephen']")
+func TestSimplePath(t *testing.T) {
+	root := assertParses(t, "/simple/path/here")
+	assert.IsType(t, (*PathTree)(nil), root)
+	pt := root.(*PathTree)
+	assert.True(t, pt.Rooted)
+	assert.Len(t, pt.Path, 3)
+	assert.IsType(t, (*NameTree)(nil), pt.Path[0])
+	assert.IsType(t, (*NameTree)(nil), pt.Path[1])
+	assert.IsType(t, (*NameTree)(nil), pt.Path[2])
+}
+
+func TestAnyChildPath(t *testing.T) {
+	root := assertParses(t, "simple//path")
+	assert.IsType(t, (*PathTree)(nil), root)
+	pt := root.(*PathTree)
+	assert.False(t, pt.Rooted)
+	assert.Len(t, pt.Path, 3)
+	assert.IsType(t, (*NameTree)(nil), pt.Path[0])
+	assert.Nil(t, pt.Path[1])
+	assert.IsType(t, (*NameTree)(nil), pt.Path[2])
+}
+
+func TestFilteredPath(t *testing.T) {
+	root := assertParses(t, "simple[1 = 1][3 <= 3]/path")
+	assert.IsType(t, (*PathTree)(nil), root)
+	pt := root.(*PathTree)
+	assert.False(t, pt.Rooted)
+	assert.Len(t, pt.Path, 2)
+	assert.IsType(t, (*FilteredSequenceTree)(nil), pt.Path[0])
+	fst := pt.Path[0].(*FilteredSequenceTree)
+	assert.IsType(t, (*NameTree)(nil), fst.Source)
+	assert.Len(t, fst.Filter, 2)
+	assert.IsType(t, (*BinopTree)(nil), fst.Filter[0])
+	filter1 := fst.Filter[0].(*BinopTree)
+	assert.Equal(t, "=", filter1.Operator)
+	assert.IsType(t, (*BinopTree)(nil), fst.Filter[0])
+	filter2 := fst.Filter[1].(*BinopTree)
+	assert.Equal(t, "<=", filter2.Operator)
 }
