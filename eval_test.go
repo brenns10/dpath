@@ -71,3 +71,104 @@ func TestEmptySequence(t *testing.T) {
 	seq := assertEvaluates(t, "()")
 	assertEmptySequence(t, seq)
 }
+
+func TestAdditionIntegers(t *testing.T) {
+	seq := assertEvaluates(t, "1 + 1")
+	item := assertSingleton(t, seq)
+	assert.Equal(t, item.Type(), TYPE_INTEGER)
+	intItem := item.(*IntegerItem)
+	assert.Equal(t, int64(2), intItem.Value)
+}
+
+func TestAdditionDoubles(t *testing.T) {
+	cases := []string{"1.0 + 1", "1 + 1.0", "1.0 + 1.0"}
+	for _, uut := range cases {
+		seq := assertEvaluates(t, uut)
+		item := assertSingleton(t, seq)
+		assert.Equal(t, item.Type(), TYPE_DOUBLE)
+		doubleItem := item.(*DoubleItem)
+		assert.Equal(t, float64(2.0), doubleItem.Value)
+	}
+}
+
+func TestSubtractionIntegers(t *testing.T) {
+	seq := assertEvaluates(t, "2 - 1")
+	item := assertSingleton(t, seq)
+	assert.Equal(t, item.Type(), TYPE_INTEGER)
+	intItem := item.(*IntegerItem)
+	assert.Equal(t, int64(1), intItem.Value)
+}
+
+func TestSubtractionDoubles(t *testing.T) {
+	cases := []string{"2.0 - 1", "2 - 1.0", "2.0 - 1.0"}
+	for _, uut := range cases {
+		seq := assertEvaluates(t, uut)
+		item := assertSingleton(t, seq)
+		assert.Equal(t, item.Type(), TYPE_DOUBLE)
+		doubleItem := item.(*DoubleItem)
+		assert.Equal(t, float64(1.0), doubleItem.Value)
+	}
+}
+
+func TestMultiplicationIntegers(t *testing.T) {
+	seq := assertEvaluates(t, "5 * 3")
+	item := assertSingleton(t, seq)
+	assert.Equal(t, item.Type(), TYPE_INTEGER)
+	intItem := item.(*IntegerItem)
+	assert.Equal(t, int64(15), intItem.Value)
+}
+
+func TestMultiplactionDoubles(t *testing.T) {
+	cases := []string{"5.0 * 3", "5 * 3.0", "5.0 * 3.0"}
+	for _, uut := range cases {
+		seq := assertEvaluates(t, uut)
+		item := assertSingleton(t, seq)
+		assert.Equal(t, item.Type(), TYPE_DOUBLE)
+		doubleItem := item.(*DoubleItem)
+		assert.Equal(t, float64(15.0), doubleItem.Value)
+	}
+}
+
+func TestDivision(t *testing.T) {
+	cases := []string{"5 div 2", "5.0 div 2", "5 div 2.0", "5.0 div 2.0"}
+	for _, uut := range cases {
+		seq := assertEvaluates(t, uut)
+		item := assertSingleton(t, seq)
+		assert.Equal(t, item.Type(), TYPE_DOUBLE)
+		doubleItem := item.(*DoubleItem)
+		assert.Equal(t, float64(2.5), doubleItem.Value)
+	}
+}
+
+func TestIntegerDivision(t *testing.T) {
+	cases := []string{"5 idiv 2", "5.0 idiv 2", "5 idiv 2.0", "5.0 idiv 2.0"}
+	for _, uut := range cases {
+		seq := assertEvaluates(t, uut)
+		item := assertSingleton(t, seq)
+		assert.Equal(t, item.Type(), TYPE_INTEGER)
+		intItem := item.(*IntegerItem)
+		assert.Equal(t, int64(2), intItem.Value)
+	}
+}
+
+func TestModulusInteger(t *testing.T) {
+	cases := []string{"5 mod 2"}
+	for _, uut := range cases {
+		seq := assertEvaluates(t, uut)
+		item := assertSingleton(t, seq)
+		assert.Equal(t, item.Type(), TYPE_INTEGER)
+		intItem := item.(*IntegerItem)
+		assert.Equal(t, int64(1), intItem.Value)
+	}
+}
+
+func TestModulusDouble(t *testing.T) {
+	cases := []string{"5.0 mod 2", "5 mod 2.0", "5.0 mod 2.0"}
+	for _, uut := range cases {
+		seq := assertEvaluates(t, uut)
+		item := assertSingleton(t, seq)
+		assert.Equal(t, item.Type(), TYPE_DOUBLE)
+		doubleItem := item.(*DoubleItem)
+		assert.Equal(t, float64(1.0), doubleItem.Value)
+	}
+}
