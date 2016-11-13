@@ -7,6 +7,14 @@ import (
 	"strconv"
 )
 
+const (
+	TYPE_INTEGER = "integer"
+	TYPE_DOUBLE  = "double"
+	TYPE_STRING  = "string"
+	TYPE_BOOL    = "bool"
+	TYPE_FILE    = "file"
+)
+
 /*
 This sub-package contains the interfaces and structures of the "data model".
 

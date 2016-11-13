@@ -53,7 +53,7 @@ or double).
 Will panic if you're wrong.
 */
 func getNumericAsFloat(i Item) float64 {
-	if i.Type() == "integer" {
+	if i.Type() == TYPE_INTEGER {
 		return float64(getInteger(i))
 	} else {
 		return getFloat(i)
@@ -111,14 +111,14 @@ func evalArithmetic(left Item, right Item,
 	otherwise func(l, r float64) Item,
 ) (Sequence, error) {
 	// Ensure that both arguments are numeric.
-	types := []string{"integer", "double"}
+	types := []string{TYPE_INTEGER, TYPE_DOUBLE}
 	if !typeCheck(types, left, right) {
 		errMsg := "Expected arguments of type integer or double, got "
 		errMsg += left.Type() + " and " + right.Type() + "."
 		return nil, errors.New(errMsg)
 	}
 	// When both arguments are integers, do integer addition.
-	if typeCheck([]string{"integer"}, left, right) {
+	if typeCheck([]string{TYPE_INTEGER}, left, right) {
 		res := bothInt(getInteger(left), getInteger(right))
 		return newSingletonSequence(res), nil
 	}
@@ -260,7 +260,7 @@ type LiteralTree struct {
 
 func newIntegerTree(num string) *LiteralTree {
 	integer, _ := strconv.ParseInt(num, 10, 64)
-	return &LiteralTree{Type: "integer", IntegerValue: integer}
+	return &LiteralTree{Type: TYPE_INTEGER, IntegerValue: integer}
 }
 
 func newStringTree(str string) *LiteralTree {
@@ -281,21 +281,21 @@ func newStringTree(str string) *LiteralTree {
 		}
 	}
 
-	return &LiteralTree{Type: "string", StringValue: buffer.String()}
+	return &LiteralTree{Type: TYPE_STRING, StringValue: buffer.String()}
 }
 
 func newDoubleTree(num string) *LiteralTree {
 	flt, _ := strconv.ParseFloat(num, 64)
-	return &LiteralTree{Type: "double", DoubleValue: flt}
+	return &LiteralTree{Type: TYPE_DOUBLE, DoubleValue: flt}
 }
 
 func (lt *LiteralTree) Evaluate(ctx *Context) (Sequence, error) {
 	switch lt.Type {
-	case "string":
+	case TYPE_STRING:
 		return newSingletonSequence(newStringItem(lt.StringValue)), nil
-	case "integer":
+	case TYPE_INTEGER:
 		return newSingletonSequence(newIntegerItem(lt.IntegerValue)), nil
-	case "double":
+	case TYPE_DOUBLE:
 		return newSingletonSequence(newDoubleItem(lt.DoubleValue)), nil
 	default:
 		return newEmptySequence(), nil
@@ -307,11 +307,11 @@ func (lt *LiteralTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)
 	var output string
 	switch lt.Type {
-	case "string":
+	case TYPE_STRING:
 		output = lt.StringValue
-	case "integer":
+	case TYPE_INTEGER:
 		output = strconv.FormatInt(lt.IntegerValue, 10)
-	case "double":
+	case TYPE_DOUBLE:
 		output = strconv.FormatFloat(lt.DoubleValue, 'f', -1, 64)
 	default:
 		output = lt.Type
