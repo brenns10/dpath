@@ -173,7 +173,7 @@ func TestModulusDouble(t *testing.T) {
 	}
 }
 
-func TestIncorrectTypesFail(t *testing.T) {
+func TestBinopIncorrectTypesFail(t *testing.T) {
 	cases := []string{
 		"1 + 'foo'",
 		"1 - ()",
@@ -181,6 +181,51 @@ func TestIncorrectTypesFail(t *testing.T) {
 		"'blah' * 2",
 		"'hello' idiv 7",
 		"'bye' mod 3",
+	}
+	for _, uut := range cases {
+		tree := assertParses(t, uut)
+		ctx := DefaultContext()
+		_, err := tree.Evaluate(ctx)
+		assert.Error(t, err)
+	}
+}
+
+func TestUnopPlusInteger(t *testing.T) {
+	seq := assertEvaluates(t, "+5")
+	item := assertSingleton(t, seq)
+	assert.Equal(t, item.Type(), TYPE_INTEGER)
+	intItem := item.(*IntegerItem)
+	assert.Equal(t, int64(5), intItem.Value)
+}
+
+func TestUnopPlusDouble(t *testing.T) {
+	seq := assertEvaluates(t, "+5.0")
+	item := assertSingleton(t, seq)
+	assert.Equal(t, item.Type(), TYPE_DOUBLE)
+	doubleItem := item.(*DoubleItem)
+	assert.Equal(t, float64(5.0), doubleItem.Value)
+}
+
+func TestUnopMinusInteger(t *testing.T) {
+	seq := assertEvaluates(t, "-5")
+	item := assertSingleton(t, seq)
+	assert.Equal(t, item.Type(), TYPE_INTEGER)
+	intItem := item.(*IntegerItem)
+	assert.Equal(t, int64(-5), intItem.Value)
+}
+
+func TestUnopMinusDouble(t *testing.T) {
+	seq := assertEvaluates(t, "-5.0")
+	item := assertSingleton(t, seq)
+	assert.Equal(t, item.Type(), TYPE_DOUBLE)
+	doubleItem := item.(*DoubleItem)
+	assert.Equal(t, float64(-5.0), doubleItem.Value)
+}
+
+func TestUnopIncorrectTypesFail(t *testing.T) {
+	cases := []string{
+		"+'foo'",
+		"- ()",
 	}
 	for _, uut := range cases {
 		tree := assertParses(t, uut)

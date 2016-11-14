@@ -245,7 +245,24 @@ func newUnopTree(op string, left ParseTree) *UnopTree {
 }
 
 func (ut *UnopTree) Evaluate(ctx *Context) (Sequence, error) {
-	return &DummySequence{}, nil
+	seq, err := ut.Left.Evaluate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	item, err := getSingleItem(seq)
+	if err != nil {
+		return nil, err
+	}
+	if !typeCheck([]string{TYPE_INTEGER, TYPE_DOUBLE}, item) {
+		return nil, errors.New("unary operator expects numeric type")
+	}
+	if ut.Operator == "+" {
+		return newSingletonSequence(item), nil
+	} else if item.Type() == TYPE_INTEGER {
+		return newSingletonSequence(newIntegerItem(-getInteger(item))), nil
+	} else {
+		return newSingletonSequence(newDoubleItem(-getFloat(item))), nil
+	}
 }
 
 func (ut *UnopTree) Print(r io.Writer, indent int) error {
