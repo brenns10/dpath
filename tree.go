@@ -51,6 +51,15 @@ func panicUnlessOne(ctx *Context, s Sequence) Item {
 }
 
 /*
+Return file value, if you're certain it's a bool.
+Will panic if you're wrong.
+*/
+func getFile(i Item) *FileItem {
+	it := i.(*FileItem)
+	return it
+}
+
+/*
 Return bool value, if you're certain it's a bool.
 Will panic if you're wrong.
 */
@@ -105,7 +114,7 @@ The first argument is a slice of string type names. The remaining arguments are
 DPath items to be type checked. Returns false if any item has type not included
 in the type list. Otherwise returns true.
 */
-func typeCheck(types []string, args ...Item) bool {
+func typeCheck(types []*Type, args ...Item) bool {
 OUTER:
 	for _, arg := range args {
 		for _, typ := range types {
@@ -150,14 +159,14 @@ func evalArithmetic(left Item, right Item,
 	otherwise func(l, r float64) Item,
 ) (Sequence, error) {
 	// Ensure that both arguments are numeric.
-	types := []string{TYPE_INTEGER, TYPE_DOUBLE}
+	types := []*Type{TYPE_INTEGER, TYPE_DOUBLE}
 	if !typeCheck(types, left, right) {
 		errMsg := "Expected arguments of type integer or double, got "
-		errMsg += left.Type() + " and " + right.Type() + "."
+		errMsg += left.Type().Name + " and " + right.Type().Name + "."
 		return nil, errors.New(errMsg)
 	}
 	// When both arguments are integers, do integer addition.
-	if typeCheck([]string{TYPE_INTEGER}, left, right) {
+	if typeCheck([]*Type{TYPE_INTEGER}, left, right) {
 		res := bothInt(getInteger(left), getInteger(right))
 		return newSingletonSequence(res), nil
 	}
@@ -256,6 +265,18 @@ func (bt *BinopTree) Evaluate(ctx *Context) (Sequence, error) {
 		return evalModulus(leftItem, rightItem)
 	case "to":
 		return evalTo(leftItem, rightItem)
+	case "eq":
+		return CmpEq(leftItem, rightItem)
+	case "ne":
+		return CmpNe(leftItem, rightItem)
+	case "le":
+		return CmpLe(leftItem, rightItem)
+	case "lt":
+		return CmpLt(leftItem, rightItem)
+	case "ge":
+		return CmpGe(leftItem, rightItem)
+	case "gt":
+		return CmpGt(leftItem, rightItem)
 	default:
 		return nil, errors.New("not implemented")
 	}
@@ -294,7 +315,7 @@ func (ut *UnopTree) Evaluate(ctx *Context) (Sequence, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !typeCheck([]string{TYPE_INTEGER, TYPE_DOUBLE}, item) {
+	if !typeCheck([]*Type{TYPE_INTEGER, TYPE_DOUBLE}, item) {
 		return nil, errors.New("unary operator expects numeric type")
 	}
 	if ut.Operator == "+" {
@@ -319,7 +340,7 @@ func (ut *UnopTree) Print(r io.Writer, indent int) error {
 }
 
 type LiteralTree struct {
-	Type          string
+	Type          *Type
 	StringValue   string
 	IntegerValue  int64
 	DoubleValue   float64
@@ -382,7 +403,7 @@ func (lt *LiteralTree) Print(r io.Writer, indent int) error {
 	case TYPE_DOUBLE:
 		output = strconv.FormatFloat(lt.DoubleValue, 'f', -1, 64)
 	default:
-		output = lt.Type
+		output = lt.Type.Name
 	}
 	if _, e = io.WriteString(r, indentStr+output+"\n"); e != nil {
 		return e

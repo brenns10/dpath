@@ -66,7 +66,7 @@ func BuiltinBooleanInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 	} else {
 		// SINGLETON
 		switch item.Type() {
-		case TYPE_BOOL:
+		case TYPE_BOOLEAN:
 			// Case 3
 			return newSingletonSequence(item), nil
 		case TYPE_INTEGER:
@@ -80,7 +80,7 @@ func BuiltinBooleanInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 			value = len(getString(item)) > 0
 		default:
 			errorMsg := "type error in boolean(): unexpected singleton type "
-			errorMsg += item.Type()
+			errorMsg += item.Type().Name
 			return nil, errors.New(errorMsg)
 		}
 	}

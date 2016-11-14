@@ -7,14 +7,6 @@ import (
 	"strconv"
 )
 
-const (
-	TYPE_INTEGER = "integer"
-	TYPE_DOUBLE  = "double"
-	TYPE_STRING  = "string"
-	TYPE_BOOL    = "boolean"
-	TYPE_FILE    = "file"
-)
-
 /*
 This sub-package contains the interfaces and structures of the "data model".
 
@@ -28,7 +20,7 @@ required operation is that it can tell us its type, so we can type check and
  cast it to its actual type.
 */
 type Item interface {
-	Type() string
+	Type() *Type
 	Print(w io.Writer) error
 }
 
@@ -86,9 +78,7 @@ of interfaces.
 */
 type DummyItem struct{}
 
-func (d *DummyItem) Type() string {
-	return "dummy"
-}
+func (d *DummyItem) Type() *Type { return TYPE_DUMMY }
 
 func (d *DummyItem) Print(w io.Writer) error {
 	_, err := io.WriteString(w, "dummy\n")
@@ -102,7 +92,7 @@ type IntegerItem struct {
 	Value int64
 }
 
-func (i *IntegerItem) Type() string { return TYPE_INTEGER }
+func (i *IntegerItem) Type() *Type { return TYPE_INTEGER }
 
 func (i *IntegerItem) Print(w io.Writer) error {
 	str := "integer:" + strconv.FormatInt(i.Value, 10) + "\n"
@@ -121,7 +111,7 @@ type DoubleItem struct {
 	Value float64
 }
 
-func (i *DoubleItem) Type() string { return TYPE_DOUBLE }
+func (i *DoubleItem) Type() *Type { return TYPE_DOUBLE }
 
 func (i *DoubleItem) Print(w io.Writer) error {
 	str := "double:" + strconv.FormatFloat(i.Value, 'f', -1, 64) + "\n"
@@ -140,7 +130,7 @@ type StringItem struct {
 	Value string
 }
 
-func (i *StringItem) Type() string { return TYPE_STRING }
+func (i *StringItem) Type() *Type { return TYPE_STRING }
 
 func (i *StringItem) Print(w io.Writer) error {
 	_, err := io.WriteString(w, "string:\""+i.Value+"\"\n")
@@ -158,7 +148,7 @@ type BooleanItem struct {
 	Value bool
 }
 
-func (i *BooleanItem) Type() string { return TYPE_BOOL }
+func (i *BooleanItem) Type() *Type { return TYPE_BOOLEAN }
 
 func (i *BooleanItem) Print(w io.Writer) error {
 	_, err := io.WriteString(w, "boolean:"+strconv.FormatBool(i.Value)+"\n")
@@ -177,7 +167,7 @@ type FileItem struct {
 	Info os.FileInfo
 }
 
-func (i *FileItem) Type() string { return TYPE_FILE }
+func (i *FileItem) Type() *Type { return TYPE_FILE }
 
 func (i *FileItem) Print(w io.Writer) error {
 	_, err := io.WriteString(w, "file:"+i.Path+"\n")
