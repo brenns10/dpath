@@ -39,14 +39,22 @@ func BuiltinBooleanInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 	// from DPath, which checks that the number of arguments equals the declared
 	// number for the builtin
 	arg := args[0]
-	if !arg.Next() {
+	hasNext, err := arg.Next(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !hasNext {
 		// Case 1, false!
 		return newSingletonSequence(newBooleanItem(false)), nil
 	}
 
 	item := arg.Value()
 
-	if arg.Next() {
+	hasNext, err = arg.Next(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if hasNext {
 		// NOT A SINGLETON
 		if item.Type() == TYPE_FILE {
 			// Case 2, true!

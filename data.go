@@ -39,7 +39,7 @@ generator for files in a directory.
 */
 type Sequence interface {
 	Value() Item
-	Next() bool
+	Next(ctx *Context) (bool, error)
 }
 
 /*
@@ -208,8 +208,8 @@ func (d *DummySequence) Value() Item {
 	return &DummyItem{}
 }
 
-func (d *DummySequence) Next() bool {
-	return false
+func (d *DummySequence) Next(ctx *Context) (bool, error) {
+	return false, nil
 }
 
 /*
@@ -239,9 +239,9 @@ func (s *WrapperSequence) Value() Item {
 	return s.Wrapped[s.Index]
 }
 
-func (s *WrapperSequence) Next() bool {
+func (s *WrapperSequence) Next(ctx *Context) (bool, error) {
 	s.Index++
-	return s.Index < len(s.Wrapped)
+	return s.Index < len(s.Wrapped), nil
 }
 
 /*
@@ -271,12 +271,54 @@ func (s *RangeSequence) Value() Item {
 	}
 }
 
-func (s *RangeSequence) Next() bool {
+func (s *RangeSequence) Next(ctx *Context) (bool, error) {
 	if s.IsInt {
 		s.IntCurrent++
-		return s.IntCurrent <= s.IntStop
+		return s.IntCurrent <= s.IntStop, nil
 	} else {
 		s.DblCurrent++
-		return s.DblCurrent <= s.DblStop
+		return s.DblCurrent <= s.DblStop, nil
 	}
+}
+
+/*
+ExpressionFilteredSequence is a sequence that filters by a list of predicates
+which are simply expressions.
+*/
+type ExpressionFilter struct {
+	Source  Sequence
+	Current Item
+	Filters []ParseTree
+}
+
+func newExpressionFilter(src Sequence, f []ParseTree) *ExpressionFilter {
+	return &ExpressionFilter{Source: src, Current: nil, Filters: f}
+}
+
+func (f *ExpressionFilter) Value() Item {
+	return f.Current
+}
+
+func (f *ExpressionFilter) Next(ctx *Context) (bool, error) {
+	var e error = nil
+OUTER:
+	for r, e := f.Source.Next(ctx); r && e == nil; r, e = f.Source.Next(ctx) {
+		f.Current = f.Source.Value()
+		oldCtxItem := ctx.ContextItem
+		ctx.ContextItem = f.Current
+		for _, filter := range f.Filters {
+			res, err := execBuiltin(ctx, "boolean", filter)
+			if err != nil {
+				ctx.ContextItem = oldCtxItem
+				return false, err
+			}
+			if !getBool(panicUnlessOne(ctx, res)) {
+				ctx.ContextItem = oldCtxItem
+				continue OUTER
+			}
+		}
+		ctx.ContextItem = oldCtxItem
+		return true, nil
+	}
+	return false, e
 }

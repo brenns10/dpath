@@ -10,7 +10,7 @@ func TestBooleanEmptySequence(t *testing.T) {
 	ctx := DefaultContext()
 	s, e1 := BuiltinBooleanInvoke(ctx, newEmptySequence())
 	assert.Nil(t, e1)
-	i, e2 := getSingleItem(s)
+	i, e2 := getSingleItem(ctx, s)
 	assert.Nil(t, e2)
 	v, ok := i.(*BooleanItem)
 	assert.True(t, ok)
@@ -24,7 +24,7 @@ func TestBooleanEmptyString(t *testing.T) {
 
 	s, e1 := BuiltinBooleanInvoke(ctx, input)
 	assert.Nil(t, e1)
-	i, e2 := getSingleItem(s)
+	i, e2 := getSingleItem(ctx, s)
 	assert.Nil(t, e2)
 	v, ok := i.(*BooleanItem)
 	assert.True(t, ok)
@@ -38,7 +38,7 @@ func TestBooleanNonEmptyString(t *testing.T) {
 
 	s, e1 := BuiltinBooleanInvoke(ctx, input)
 	assert.Nil(t, e1)
-	i, e2 := getSingleItem(s)
+	i, e2 := getSingleItem(ctx, s)
 	assert.Nil(t, e2)
 	v, ok := i.(*BooleanItem)
 	assert.True(t, ok)
@@ -52,7 +52,7 @@ func TestBooleanIntegerZero(t *testing.T) {
 
 	s, e1 := BuiltinBooleanInvoke(ctx, input)
 	assert.Nil(t, e1)
-	i, e2 := getSingleItem(s)
+	i, e2 := getSingleItem(ctx, s)
 	assert.Nil(t, e2)
 	v, ok := i.(*BooleanItem)
 	assert.True(t, ok)
@@ -66,7 +66,7 @@ func TestBooleanIntegerNonzero(t *testing.T) {
 
 	s, e1 := BuiltinBooleanInvoke(ctx, input)
 	assert.Nil(t, e1)
-	i, e2 := getSingleItem(s)
+	i, e2 := getSingleItem(ctx, s)
 	assert.Nil(t, e2)
 	v, ok := i.(*BooleanItem)
 	assert.True(t, ok)
@@ -80,7 +80,7 @@ func TestBooleanDoubleZero(t *testing.T) {
 
 	s, e1 := BuiltinBooleanInvoke(ctx, input)
 	assert.Nil(t, e1)
-	i, e2 := getSingleItem(s)
+	i, e2 := getSingleItem(ctx, s)
 	assert.Nil(t, e2)
 	v, ok := i.(*BooleanItem)
 	assert.True(t, ok)
@@ -94,7 +94,7 @@ func TestBooleanDoubleNan(t *testing.T) {
 
 	s, e1 := BuiltinBooleanInvoke(ctx, input)
 	assert.Nil(t, e1)
-	i, e2 := getSingleItem(s)
+	i, e2 := getSingleItem(ctx, s)
 	assert.Nil(t, e2)
 	v, ok := i.(*BooleanItem)
 	assert.True(t, ok)
@@ -108,7 +108,7 @@ func TestBooleanDoubleTrue(t *testing.T) {
 
 	s, e1 := BuiltinBooleanInvoke(ctx, input)
 	assert.Nil(t, e1)
-	i, e2 := getSingleItem(s)
+	i, e2 := getSingleItem(ctx, s)
 	assert.Nil(t, e2)
 	v, ok := i.(*BooleanItem)
 	assert.True(t, ok)
@@ -122,7 +122,7 @@ func TestBooleanFalseBool(t *testing.T) {
 
 	s, e1 := BuiltinBooleanInvoke(ctx, input)
 	assert.Nil(t, e1)
-	i, e2 := getSingleItem(s)
+	i, e2 := getSingleItem(ctx, s)
 	assert.Nil(t, e2)
 	v, ok := i.(*BooleanItem)
 	assert.True(t, ok)
@@ -136,7 +136,7 @@ func TestBooleanTrueBool(t *testing.T) {
 
 	s, e1 := BuiltinBooleanInvoke(ctx, input)
 	assert.Nil(t, e1)
-	i, e2 := getSingleItem(s)
+	i, e2 := getSingleItem(ctx, s)
 	assert.Nil(t, e2)
 	v, ok := i.(*BooleanItem)
 	assert.True(t, ok)

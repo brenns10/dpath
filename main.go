@@ -38,9 +38,13 @@ func main() {
 	} else {
 		fmt.Println("OUTPUT:")
 	}
-	for seq.Next() {
+	for r, err := seq.Next(ctx); r && err == nil; r, err = seq.Next(ctx) {
 		if err = seq.Value().Print(os.Stdout); err != nil {
 			fmt.Println(err)
 		}
+	}
+	if err != nil {
+		fmt.Println("Error while iterating:")
+		fmt.Println(err)
 	}
 }

@@ -19,15 +19,44 @@ import (
 A utility function that returns a single item in a sequence, raising an error
 if there are zero or >1 items in the sequence.
 */
-func getSingleItem(s Sequence) (Item, error) {
-	if !s.Next() {
+func getSingleItem(ctx *Context, s Sequence) (Item, error) {
+	r, e := s.Next(ctx)
+	if !r {
 		return nil, errors.New("Expected one value, found none.")
+	} else if e != nil {
+		return nil, e
 	}
 	item := s.Value()
-	if s.Next() {
+	r, e = s.Next(ctx)
+	if r {
 		return nil, errors.New("Too many values provided to expression.")
+	} else if e != nil {
+		return nil, e
 	}
 	return item, nil
+}
+
+/*
+A utility function that "asserts" at least one item is in a sequence, panicking
+if that's not the case.
+*/
+func panicUnlessOne(ctx *Context, s Sequence) Item {
+	r, e := s.Next(ctx)
+	if !r {
+		panic("There wasn't a value in the sequence.")
+	} else if e != nil {
+		panic("Error getting value from sequence!")
+	}
+	return s.Value()
+}
+
+/*
+Return bool value, if you're certain it's a bool.
+Will panic if you're wrong.
+*/
+func getBool(i Item) bool {
+	it := i.(*BooleanItem)
+	return it.Value
 }
 
 /*
@@ -205,10 +234,10 @@ func (bt *BinopTree) Evaluate(ctx *Context) (Sequence, error) {
 	if right, err = bt.Right.Evaluate(ctx); err != nil {
 		return nil, err
 	}
-	if leftItem, err = getSingleItem(left); err != nil {
+	if leftItem, err = getSingleItem(ctx, left); err != nil {
 		return nil, err
 	}
-	if rightItem, err = getSingleItem(right); err != nil {
+	if rightItem, err = getSingleItem(ctx, right); err != nil {
 		return nil, err
 	}
 
@@ -261,7 +290,7 @@ func (ut *UnopTree) Evaluate(ctx *Context) (Sequence, error) {
 	if err != nil {
 		return nil, err
 	}
-	item, err := getSingleItem(seq)
+	item, err := getSingleItem(ctx, seq)
 	if err != nil {
 		return nil, err
 	}
@@ -370,28 +399,32 @@ func newFunccallTree(name string, args []ParseTree) *FunccallTree {
 	return &FunccallTree{Function: name, Arguments: args}
 }
 
-func (t *FunccallTree) Evaluate(ctx *Context) (Sequence, error) {
+func execBuiltin(ctx *Context, name string, args ...ParseTree) (Sequence, error) {
 	var err error
-	builtin, ok := ctx.Namespace[t.Function]
+	builtin, ok := ctx.Namespace[name]
 	if !ok {
-		return nil, errors.New("builtin function " + t.Function + " not found.")
+		return nil, errors.New("builtin function " + name + " not found.")
 	}
 
-	if len(t.Arguments) != builtin.NumArgs {
+	if len(args) != builtin.NumArgs {
 		return nil, errors.New(fmt.Sprintf(
 			"in call to %s, expected %d args, got %d",
-			t.Function, builtin.NumArgs, len(t.Arguments),
+			name, builtin.NumArgs, len(args),
 		))
 	}
 
-	arguments := make([]Sequence, len(t.Arguments))
-	for i, tree := range t.Arguments {
+	arguments := make([]Sequence, len(args))
+	for i, tree := range args {
 		arguments[i], err = tree.Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
 	}
 	return builtin.Invoke(ctx, arguments...)
+}
+
+func (t *FunccallTree) Evaluate(ctx *Context) (Sequence, error) {
+	return execBuiltin(ctx, t.Function, t.Arguments...)
 }
 
 func (ft *FunccallTree) Print(r io.Writer, indent int) error {
@@ -451,7 +484,14 @@ func newFilteredSequenceTree(s ParseTree, f []ParseTree) *FilteredSequenceTree {
 	return &FilteredSequenceTree{Source: s, Filter: f}
 }
 
-func (bt *FilteredSequenceTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
+func (bt *FilteredSequenceTree) Evaluate(ctx *Context) (Sequence, error) {
+	seq, err := bt.Source.Evaluate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// BUG(stephen): numeric expressions should index into a sequence
+	return newExpressionFilter(seq, bt.Filter), nil
+}
 
 func (t *FilteredSequenceTree) Print(r io.Writer, indent int) error {
 	var e error
