@@ -243,3 +243,40 @@ func (s *WrapperSequence) Next() bool {
 	s.Index++
 	return s.Index < len(s.Wrapped)
 }
+
+/*
+RangeSequence creates a range of numbers, either integer or double
+*/
+type RangeSequence struct {
+	IntCurrent int64
+	IntStop    int64
+	DblCurrent float64
+	DblStop    float64
+	IsInt      bool
+}
+
+func newIntegerRange(start, stop int64) *RangeSequence {
+	return &RangeSequence{IsInt: true, IntCurrent: start - 1, IntStop: stop}
+}
+
+func newDoubleRange(start, stop float64) *RangeSequence {
+	return &RangeSequence{IsInt: false, DblCurrent: start - 1, DblStop: stop}
+}
+
+func (s *RangeSequence) Value() Item {
+	if s.IsInt {
+		return newIntegerItem(s.IntCurrent)
+	} else {
+		return newDoubleItem(s.DblCurrent)
+	}
+}
+
+func (s *RangeSequence) Next() bool {
+	if s.IsInt {
+		s.IntCurrent++
+		return s.IntCurrent <= s.IntStop
+	} else {
+		s.DblCurrent++
+		return s.DblCurrent <= s.DblStop
+	}
+}

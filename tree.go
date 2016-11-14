@@ -185,6 +185,16 @@ func evalModulus(left, right Item) (Sequence, error) {
 	)
 }
 
+func evalTo(left, right Item) (Sequence, error) {
+	if left.Type() == TYPE_INTEGER && right.Type() == TYPE_INTEGER {
+		return newIntegerRange(getInteger(left), getInteger(right)), nil
+	} else if left.Type() == TYPE_DOUBLE && right.Type() == TYPE_DOUBLE {
+		return newDoubleRange(getFloat(left), getFloat(right)), nil
+	} else {
+		return nil, errors.New("mismatched or undefined types in range expression")
+	}
+}
+
 func (bt *BinopTree) Evaluate(ctx *Context) (Sequence, error) {
 	var left, right Sequence
 	var leftItem, rightItem Item
@@ -215,6 +225,8 @@ func (bt *BinopTree) Evaluate(ctx *Context) (Sequence, error) {
 		return evalIntegerDivision(leftItem, rightItem)
 	case "mod":
 		return evalModulus(leftItem, rightItem)
+	case "to":
+		return evalTo(leftItem, rightItem)
 	default:
 		return nil, errors.New("not implemented")
 	}
