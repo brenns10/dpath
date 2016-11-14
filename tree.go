@@ -500,7 +500,9 @@ func newNameTree(s string) *NameTree {
 	return &NameTree{Name: s}
 }
 
-func (bt *NameTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
+func (bt *NameTree) Evaluate(ctx *Context) (Sequence, error) {
+	return ctx.CurrentAxis.GetByName(ctx, bt.Name)
+}
 
 func (t *NameTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)

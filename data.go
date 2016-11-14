@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"os"
 	"path"
@@ -56,7 +57,7 @@ func DefaultContext() *Context {
 	}
 	return &Context{
 		ContextItem: item,
-		CurrentAxis: nil,
+		CurrentAxis: newChildAxis(),
 		Namespace:   DefaultNamespace(),
 	}
 }
@@ -68,8 +69,8 @@ within the context directory, or it could be the files within all subdirectories
 of the the context, etc.
 */
 type Axis interface {
-	GetByName(ctx *Context, name string) Item
-	Iterate(ctx *Context) Sequence
+	GetByName(ctx *Context, name string) (Sequence, error)
+	Iterate(ctx *Context) (Sequence, error)
 }
 
 /*
@@ -311,4 +312,60 @@ OUTER:
 		return true, nil
 	}
 	return false, e
+}
+
+/*
+ChildAxis is the default axis for normal operation.
+*/
+type ChildAxis struct {
+}
+
+func newChildAxis() *ChildAxis {
+	return &ChildAxis{}
+}
+
+func (a *ChildAxis) GetByName(ctx *Context, name string) (Sequence, error) {
+	ctxItem, ok := ctx.ContextItem.(*FileItem)
+	if !ok {
+		return nil, errors.New(
+			"Attempting to use ChildAxis when context item is not a file.",
+		)
+	}
+	path := path.Join(ctxItem.Path, name)
+	newItem, err := newFileItem(path)
+	if err != nil {
+		// assume file not found, and return empty sequence
+		return newEmptySequence(), nil
+	} else {
+		return newSingletonSequence(newItem), nil
+	}
+}
+
+func (a *ChildAxis) Iterate(ctx *Context) (Sequence, error) {
+	ctxItem, ok := ctx.ContextItem.(*FileItem)
+	if !ok {
+		return nil, errors.New(
+			"Attempting to use ChildAxis when context item is not a file.",
+		)
+	}
+	f, err := os.Open(ctxItem.Path)
+	if err != nil {
+		return nil, errors.New(
+			"Error while attempting to Open() context item.",
+		)
+	}
+	contents, err := f.Readdir(0)
+	if err != nil {
+		f.Close()
+		return nil, errors.New(
+			"Error while attempting to Readdir() context item.",
+		)
+	}
+
+	children := make([]Item, 0, len(contents))
+	for _, info := range contents {
+		children = append(children, newFileItemFromInfo(info, ctxItem.Path))
+	}
+
+	return newWrapperSequence(children), nil
 }
