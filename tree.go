@@ -386,7 +386,9 @@ func newContextItemTree() *ContextItemTree {
 	return &ContextItemTree{}
 }
 
-func (bt *ContextItemTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
+func (bt *ContextItemTree) Evaluate(ctx *Context) (Sequence, error) {
+	return newSingletonSequence(ctx.ContextItem), nil
+}
 
 func (t *ContextItemTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)
