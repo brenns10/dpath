@@ -11,7 +11,7 @@ const (
 	TYPE_INTEGER = "integer"
 	TYPE_DOUBLE  = "double"
 	TYPE_STRING  = "string"
-	TYPE_BOOL    = "bool"
+	TYPE_BOOL    = "boolean"
 	TYPE_FILE    = "file"
 )
 
@@ -50,6 +50,7 @@ and the current axis (by default, files+subdirs).
 type Context struct {
 	ContextItem Item
 	CurrentAxis Axis
+	Namespace   map[string]Builtin
 }
 
 func DefaultContext() *Context {
@@ -61,7 +62,11 @@ func DefaultContext() *Context {
 	if err != nil {
 		panic("Lstat() failed!")
 	}
-	return &Context{ContextItem: item, CurrentAxis: nil}
+	return &Context{
+		ContextItem: item,
+		CurrentAxis: nil,
+		Namespace:   DefaultNamespace(),
+	}
 }
 
 /*
@@ -97,7 +102,7 @@ type IntegerItem struct {
 	Value int64
 }
 
-func (i *IntegerItem) Type() string { return "integer" }
+func (i *IntegerItem) Type() string { return TYPE_INTEGER }
 
 func (i *IntegerItem) Print(w io.Writer) error {
 	str := "integer:" + strconv.FormatInt(i.Value, 10) + "\n"
@@ -116,7 +121,7 @@ type DoubleItem struct {
 	Value float64
 }
 
-func (i *DoubleItem) Type() string { return "double" }
+func (i *DoubleItem) Type() string { return TYPE_DOUBLE }
 
 func (i *DoubleItem) Print(w io.Writer) error {
 	str := "double:" + strconv.FormatFloat(i.Value, 'f', -1, 64) + "\n"
@@ -135,7 +140,7 @@ type StringItem struct {
 	Value string
 }
 
-func (i *StringItem) Type() string { return "string" }
+func (i *StringItem) Type() string { return TYPE_STRING }
 
 func (i *StringItem) Print(w io.Writer) error {
 	_, err := io.WriteString(w, "string:\""+i.Value+"\"\n")
@@ -147,6 +152,24 @@ func newStringItem(v string) *StringItem {
 }
 
 /*
+A boolean!
+*/
+type BooleanItem struct {
+	Value bool
+}
+
+func (i *BooleanItem) Type() string { return TYPE_BOOL }
+
+func (i *BooleanItem) Print(w io.Writer) error {
+	_, err := io.WriteString(w, "boolean:"+strconv.FormatBool(i.Value)+"\n")
+	return err
+}
+
+func newBooleanItem(v bool) *BooleanItem {
+	return &BooleanItem{Value: v}
+}
+
+/*
 File item (could be a directory too)!
 */
 type FileItem struct {
@@ -154,7 +177,7 @@ type FileItem struct {
 	Info os.FileInfo
 }
 
-func (i *FileItem) Type() string { return "file" }
+func (i *FileItem) Type() string { return TYPE_FILE }
 
 func (i *FileItem) Print(w io.Writer) error {
 	_, err := io.WriteString(w, "file:"+i.Path+"\n")

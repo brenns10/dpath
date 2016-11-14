@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"strconv"
@@ -27,6 +28,15 @@ func getSingleItem(s Sequence) (Item, error) {
 		return nil, errors.New("Too many values provided to expression.")
 	}
 	return item, nil
+}
+
+/*
+Return string value, if you're certain it's a string.
+Will panic if you're wrong.
+*/
+func getString(i Item) string {
+	it := i.(*StringItem)
+	return it.Value
 }
 
 /*
@@ -331,7 +341,29 @@ func newFunccallTree(name string, args []ParseTree) *FunccallTree {
 	return &FunccallTree{Function: name, Arguments: args}
 }
 
-func (bt *FunccallTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
+func (t *FunccallTree) Evaluate(ctx *Context) (Sequence, error) {
+	var err error
+	builtin, ok := ctx.Namespace[t.Function]
+	if !ok {
+		return nil, errors.New("builtin function " + t.Function + " not found.")
+	}
+
+	if len(t.Arguments) != builtin.NumArgs {
+		return nil, errors.New(fmt.Sprintf(
+			"in call to %s, expected %d args, got %d",
+			t.Function, builtin.NumArgs, len(t.Arguments),
+		))
+	}
+
+	arguments := make([]Sequence, len(t.Arguments))
+	for i, tree := range t.Arguments {
+		arguments[i], err = tree.Evaluate(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return builtin.Invoke(ctx, arguments...)
+}
 
 func (ft *FunccallTree) Print(r io.Writer, indent int) error {
 	var e error
