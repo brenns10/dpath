@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"strconv"
 	"strings"
 )
@@ -149,90 +148,6 @@ func newBinopTree(op string, left ParseTree, right ParseTree) *BinopTree {
 	return &BinopTree{Operator: op, Left: left, Right: right}
 }
 
-/*
-Utility function for binary arithmetic operators. Performs boilerplate
-type checking. Takes two items and a function to call when both are integers,
-as well as a function to call when one is a double.
-*/
-func evalArithmetic(left Item, right Item,
-	bothInt func(l, r int64) Item,
-	otherwise func(l, r float64) Item,
-) (Sequence, error) {
-	// Ensure that both arguments are numeric.
-	types := []*Type{TYPE_INTEGER, TYPE_DOUBLE}
-	if !typeCheck(types, left, right) {
-		errMsg := "Expected arguments of type integer or double, got "
-		errMsg += left.Type().Name + " and " + right.Type().Name + "."
-		return nil, errors.New(errMsg)
-	}
-	// When both arguments are integers, do integer addition.
-	if typeCheck([]*Type{TYPE_INTEGER}, left, right) {
-		res := bothInt(getInteger(left), getInteger(right))
-		return newSingletonSequence(res), nil
-	}
-	// Otherwise, up-cast to double.
-	res := otherwise(getNumericAsFloat(left), getNumericAsFloat(right))
-	return newSingletonSequence(res), nil
-}
-
-func evalPlus(left Item, right Item) (Sequence, error) {
-	return evalArithmetic(
-		left, right,
-		func(l, r int64) Item { return newIntegerItem(l + r) },
-		func(l, r float64) Item { return newDoubleItem(l + r) },
-	)
-}
-
-func evalMinus(left, right Item) (Sequence, error) {
-	return evalArithmetic(
-		left, right,
-		func(l, r int64) Item { return newIntegerItem(l - r) },
-		func(l, r float64) Item { return newDoubleItem(l - r) },
-	)
-}
-
-func evalMultiply(left, right Item) (Sequence, error) {
-	return evalArithmetic(
-		left, right,
-		func(l, r int64) Item { return newIntegerItem(l * r) },
-		func(l, r float64) Item { return newDoubleItem(l * r) },
-	)
-}
-
-func evalDivide(left, right Item) (Sequence, error) {
-	return evalArithmetic(
-		left, right,
-		func(l, r int64) Item { return newDoubleItem(float64(l) / float64(r)) },
-		func(l, r float64) Item { return newDoubleItem(l / r) },
-	)
-}
-
-func evalIntegerDivision(left, right Item) (Sequence, error) {
-	return evalArithmetic(
-		left, right,
-		func(l, r int64) Item { return newIntegerItem(l / r) },
-		func(l, r float64) Item { return newIntegerItem(int64(l / r)) },
-	)
-}
-
-func evalModulus(left, right Item) (Sequence, error) {
-	return evalArithmetic(
-		left, right,
-		func(l, r int64) Item { return newIntegerItem(l % r) },
-		func(l, r float64) Item { return newDoubleItem(math.Mod(l, r)) },
-	)
-}
-
-func evalTo(left, right Item) (Sequence, error) {
-	if left.Type() == TYPE_INTEGER && right.Type() == TYPE_INTEGER {
-		return newIntegerRange(getInteger(left), getInteger(right)), nil
-	} else if left.Type() == TYPE_DOUBLE && right.Type() == TYPE_DOUBLE {
-		return newDoubleRange(getFloat(left), getFloat(right)), nil
-	} else {
-		return nil, errors.New("mismatched or undefined types in range expression")
-	}
-}
-
 func (bt *BinopTree) Evaluate(ctx *Context) (Sequence, error) {
 	var left, right Sequence
 	var leftItem, rightItem Item
@@ -252,19 +167,19 @@ func (bt *BinopTree) Evaluate(ctx *Context) (Sequence, error) {
 
 	switch bt.Operator {
 	case "+":
-		return evalPlus(leftItem, rightItem)
+		return leftItem.Type().EvalPlus(leftItem, rightItem)
 	case "-":
-		return evalMinus(leftItem, rightItem)
+		return leftItem.Type().EvalMinus(leftItem, rightItem)
 	case "*":
-		return evalMultiply(leftItem, rightItem)
+		return leftItem.Type().EvalMultiply(leftItem, rightItem)
 	case "div":
-		return evalDivide(leftItem, rightItem)
+		return leftItem.Type().EvalDivide(leftItem, rightItem)
 	case "idiv":
-		return evalIntegerDivision(leftItem, rightItem)
+		return leftItem.Type().EvalIntegerDivide(leftItem, rightItem)
 	case "mod":
-		return evalModulus(leftItem, rightItem)
+		return leftItem.Type().EvalModulus(leftItem, rightItem)
 	case "to":
-		return evalTo(leftItem, rightItem)
+		return leftItem.Type().EvalTo(leftItem, rightItem)
 	case "eq":
 		return CmpEq(leftItem, rightItem)
 	case "ne":

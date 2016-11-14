@@ -3,11 +3,28 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math"
 )
 
 type Type struct {
-	Name    string
-	Compare func(left, right Item, rel bool) (int64, error)
+	Name              string
+	Compare           func(left, right Item, rel bool) (int64, error)
+	EvalPlus          func(left, right Item) (Sequence, error)
+	EvalMinus         func(left, right Item) (Sequence, error)
+	EvalMultiply      func(left, right Item) (Sequence, error)
+	EvalDivide        func(left, right Item) (Sequence, error)
+	EvalIntegerDivide func(left, right Item) (Sequence, error)
+	EvalModulus       func(left, right Item) (Sequence, error)
+	EvalTo            func(left, right Item) (Sequence, error)
+}
+
+func Unsupported(operator string) func(left, right Item) (Sequence, error) {
+	return func(left, right Item) (Sequence, error) {
+		return nil, errors.New(fmt.Sprintf(
+			"operator %s is not supported on types %s, %s",
+			operator, right.Type().Name, left.Type().Name,
+		))
+	}
 }
 
 /*
@@ -24,20 +41,47 @@ var (
 		Compare: nil,
 	}
 	TYPE_BOOLEAN = &Type{
-		Name:    "boolean",
-		Compare: nil,
+		Name:              "boolean",
+		EvalPlus:          Unsupported("+"),
+		EvalMinus:         Unsupported("-"),
+		EvalMultiply:      Unsupported("*"),
+		EvalDivide:        Unsupported("div"),
+		EvalIntegerDivide: Unsupported("idiv"),
+		EvalModulus:       Unsupported("mod"),
+		EvalTo:            Unsupported("to"),
 	}
 	TYPE_STRING = &Type{
-		Name:    "string",
-		Compare: nil,
+		Name:              "string",
+		Compare:           nil,
+		EvalPlus:          Unsupported("+"),
+		EvalMinus:         Unsupported("-"),
+		EvalMultiply:      Unsupported("*"),
+		EvalDivide:        Unsupported("div"),
+		EvalIntegerDivide: Unsupported("idiv"),
+		EvalModulus:       Unsupported("mod"),
+		EvalTo:            Unsupported("to"),
 	}
 	TYPE_FILE = &Type{
-		Name:    "file",
-		Compare: nil,
+		Name:              "file",
+		Compare:           nil,
+		EvalPlus:          Unsupported("+"),
+		EvalMinus:         Unsupported("-"),
+		EvalMultiply:      Unsupported("*"),
+		EvalDivide:        Unsupported("div"),
+		EvalIntegerDivide: Unsupported("idiv"),
+		EvalModulus:       Unsupported("mod"),
+		EvalTo:            Unsupported("to"),
 	}
 	TYPE_DUMMY = &Type{
-		Name:    "dummy",
-		Compare: nil,
+		Name:              "dummy",
+		Compare:           nil,
+		EvalPlus:          Unsupported("+"),
+		EvalMinus:         Unsupported("-"),
+		EvalMultiply:      Unsupported("*"),
+		EvalDivide:        Unsupported("div"),
+		EvalIntegerDivide: Unsupported("idiv"),
+		EvalModulus:       Unsupported("mod"),
+		EvalTo:            Unsupported("to"),
 	}
 )
 
@@ -159,6 +203,124 @@ func DummyCompare(left, right Item, rel bool) (int64, error) {
 }
 
 /*
+Value comparison functions!
+*/
+
+func CmpEq(left, right Item) (Sequence, error) {
+	res, err := left.Type().Compare(left, right, false)
+	return newSingletonSequence(newBooleanItem(res == 0)), err
+}
+
+func CmpNe(left, right Item) (Sequence, error) {
+	res, err := left.Type().Compare(left, right, false)
+	return newSingletonSequence(newBooleanItem(res != 0)), err
+}
+
+func CmpLe(left, right Item) (Sequence, error) {
+	res, err := left.Type().Compare(left, right, true)
+	return newSingletonSequence(newBooleanItem(res <= 0)), err
+}
+
+func CmpLt(left, right Item) (Sequence, error) {
+	res, err := left.Type().Compare(left, right, true)
+	return newSingletonSequence(newBooleanItem(res < 0)), err
+}
+
+func CmpGe(left, right Item) (Sequence, error) {
+	res, err := left.Type().Compare(left, right, true)
+	return newSingletonSequence(newBooleanItem(res >= 0)), err
+}
+
+func CmpGt(left, right Item) (Sequence, error) {
+	res, err := left.Type().Compare(left, right, true)
+	return newSingletonSequence(newBooleanItem(res > 0)), err
+}
+
+/*
+Utility function for binary arithmetic operators. Performs boilerplate
+type checking. Takes two items and a function to call when both are integers,
+as well as a function to call when one is a double.
+*/
+func evalArithmetic(left Item, right Item,
+	bothInt func(l, r int64) Item,
+	otherwise func(l, r float64) Item,
+) (Sequence, error) {
+	// Ensure that both arguments are numeric.
+	types := []*Type{TYPE_INTEGER, TYPE_DOUBLE}
+	if !typeCheck(types, left, right) {
+		errMsg := "Expected arguments of type integer or double, got "
+		errMsg += left.Type().Name + " and " + right.Type().Name + "."
+		return nil, errors.New(errMsg)
+	}
+	// When both arguments are integers, do integer addition.
+	if typeCheck([]*Type{TYPE_INTEGER}, left, right) {
+		res := bothInt(getInteger(left), getInteger(right))
+		return newSingletonSequence(res), nil
+	}
+	// Otherwise, up-cast to double.
+	res := otherwise(getNumericAsFloat(left), getNumericAsFloat(right))
+	return newSingletonSequence(res), nil
+}
+
+func EvalPlusID(left Item, right Item) (Sequence, error) {
+	return evalArithmetic(
+		left, right,
+		func(l, r int64) Item { return newIntegerItem(l + r) },
+		func(l, r float64) Item { return newDoubleItem(l + r) },
+	)
+}
+
+func EvalMinusID(left, right Item) (Sequence, error) {
+	return evalArithmetic(
+		left, right,
+		func(l, r int64) Item { return newIntegerItem(l - r) },
+		func(l, r float64) Item { return newDoubleItem(l - r) },
+	)
+}
+
+func EvalMultiplyID(left, right Item) (Sequence, error) {
+	return evalArithmetic(
+		left, right,
+		func(l, r int64) Item { return newIntegerItem(l * r) },
+		func(l, r float64) Item { return newDoubleItem(l * r) },
+	)
+}
+
+func EvalDivideID(left, right Item) (Sequence, error) {
+	return evalArithmetic(
+		left, right,
+		func(l, r int64) Item { return newDoubleItem(float64(l) / float64(r)) },
+		func(l, r float64) Item { return newDoubleItem(l / r) },
+	)
+}
+
+func EvalIntegerDivideID(left, right Item) (Sequence, error) {
+	return evalArithmetic(
+		left, right,
+		func(l, r int64) Item { return newIntegerItem(l / r) },
+		func(l, r float64) Item { return newIntegerItem(int64(l / r)) },
+	)
+}
+
+func EvalModulusID(left, right Item) (Sequence, error) {
+	return evalArithmetic(
+		left, right,
+		func(l, r int64) Item { return newIntegerItem(l % r) },
+		func(l, r float64) Item { return newDoubleItem(math.Mod(l, r)) },
+	)
+}
+
+func EvalToID(left, right Item) (Sequence, error) {
+	if left.Type() == TYPE_INTEGER && right.Type() == TYPE_INTEGER {
+		return newIntegerRange(getInteger(left), getInteger(right)), nil
+	} else if left.Type() == TYPE_DOUBLE && right.Type() == TYPE_DOUBLE {
+		return newDoubleRange(getFloat(left), getFloat(right)), nil
+	} else {
+		return nil, errors.New("mismatched or undefined types in range expression")
+	}
+}
+
+/*
 We need an init function to set the Compare attribute of the structs, since
 the compare functions refer to the structs they're defining.
 */
@@ -169,51 +331,20 @@ func init() {
 	TYPE_STRING.Compare = StringCompare
 	TYPE_DUMMY.Compare = DummyCompare
 	TYPE_FILE.Compare = FileCompare
-}
 
-/*
-Try using the left type item to compare with the right. If that fails, try using
-the right type item to compare with the left.
-*/
-func cmpTryBoth(left, right Item, rel bool) (int64, error) {
-	res, err := left.Type().Compare(left, right, rel)
-	if err != nil {
-		res, err = right.Type().Compare(right, left, rel)
-		res = -res
-	}
-	return res, err
-}
+	TYPE_INTEGER.EvalPlus = EvalPlusID
+	TYPE_INTEGER.EvalMinus = EvalMinusID
+	TYPE_INTEGER.EvalMultiply = EvalMultiplyID
+	TYPE_INTEGER.EvalDivide = EvalDivideID
+	TYPE_INTEGER.EvalIntegerDivide = EvalIntegerDivideID
+	TYPE_INTEGER.EvalModulus = EvalModulusID
+	TYPE_INTEGER.EvalTo = EvalToID
 
-/*
-Value comparison functions!
-*/
-
-func CmpEq(left, right Item) (Sequence, error) {
-	res, err := cmpTryBoth(left, right, false)
-	return newSingletonSequence(newBooleanItem(res == 0)), err
-}
-
-func CmpNe(left, right Item) (Sequence, error) {
-	res, err := cmpTryBoth(left, right, false)
-	return newSingletonSequence(newBooleanItem(res != 0)), err
-}
-
-func CmpLe(left, right Item) (Sequence, error) {
-	res, err := cmpTryBoth(left, right, true)
-	return newSingletonSequence(newBooleanItem(res <= 0)), err
-}
-
-func CmpLt(left, right Item) (Sequence, error) {
-	res, err := cmpTryBoth(left, right, true)
-	return newSingletonSequence(newBooleanItem(res < 0)), err
-}
-
-func CmpGe(left, right Item) (Sequence, error) {
-	res, err := cmpTryBoth(left, right, true)
-	return newSingletonSequence(newBooleanItem(res >= 0)), err
-}
-
-func CmpGt(left, right Item) (Sequence, error) {
-	res, err := cmpTryBoth(left, right, true)
-	return newSingletonSequence(newBooleanItem(res > 0)), err
+	TYPE_DOUBLE.EvalPlus = EvalPlusID
+	TYPE_DOUBLE.EvalMinus = EvalMinusID
+	TYPE_DOUBLE.EvalMultiply = EvalMultiplyID
+	TYPE_DOUBLE.EvalDivide = EvalDivideID
+	TYPE_DOUBLE.EvalIntegerDivide = EvalIntegerDivideID
+	TYPE_DOUBLE.EvalModulus = EvalModulusID
+	TYPE_DOUBLE.EvalTo = EvalToID
 }
