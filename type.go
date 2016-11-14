@@ -22,7 +22,7 @@ func Unsupported(operator string) func(left, right Item) (Sequence, error) {
 	return func(left, right Item) (Sequence, error) {
 		return nil, errors.New(fmt.Sprintf(
 			"operator %s is not supported on types %s, %s",
-			operator, right.Type().Name, left.Type().Name,
+			operator, left.Type().Name, right.Type().Name,
 		))
 	}
 }
@@ -206,34 +206,34 @@ func DummyCompare(left, right Item, rel bool) (int64, error) {
 Value comparison functions!
 */
 
-func CmpEq(left, right Item) (Sequence, error) {
+func CmpEq(left, right Item) (bool, error) {
 	res, err := left.Type().Compare(left, right, false)
-	return newSingletonSequence(newBooleanItem(res == 0)), err
+	return res == 0, err
 }
 
-func CmpNe(left, right Item) (Sequence, error) {
+func CmpNe(left, right Item) (bool, error) {
 	res, err := left.Type().Compare(left, right, false)
-	return newSingletonSequence(newBooleanItem(res != 0)), err
+	return res != 0, err
 }
 
-func CmpLe(left, right Item) (Sequence, error) {
+func CmpLe(left, right Item) (bool, error) {
 	res, err := left.Type().Compare(left, right, true)
-	return newSingletonSequence(newBooleanItem(res <= 0)), err
+	return res <= 0, err
 }
 
-func CmpLt(left, right Item) (Sequence, error) {
+func CmpLt(left, right Item) (bool, error) {
 	res, err := left.Type().Compare(left, right, true)
-	return newSingletonSequence(newBooleanItem(res < 0)), err
+	return res < 0, err
 }
 
-func CmpGe(left, right Item) (Sequence, error) {
+func CmpGe(left, right Item) (bool, error) {
 	res, err := left.Type().Compare(left, right, true)
-	return newSingletonSequence(newBooleanItem(res >= 0)), err
+	return res >= 0, err
 }
 
-func CmpGt(left, right Item) (Sequence, error) {
+func CmpGt(left, right Item) (bool, error) {
 	res, err := left.Type().Compare(left, right, true)
-	return newSingletonSequence(newBooleanItem(res > 0)), err
+	return res > 0, err
 }
 
 /*
@@ -347,4 +347,39 @@ func init() {
 	TYPE_DOUBLE.EvalIntegerDivide = EvalIntegerDivideID
 	TYPE_DOUBLE.EvalModulus = EvalModulusID
 	TYPE_DOUBLE.EvalTo = EvalToID
+}
+
+func GeneralComparison(ctx *Context, left, right Sequence,
+	comparator func(left, right Item) (bool, error)) (Sequence, error) {
+
+	var e error = nil
+	var b, cmp bool
+	var l, r Item
+
+	// need to load the whole left side before we can begin comparing
+	leftSlice := make([]Item, 0)
+	for b, e = left.Next(ctx); b && e == nil; b, e = left.Next(ctx) {
+		leftSlice = append(leftSlice, left.Value())
+	}
+	if e != nil {
+		return nil, e
+	}
+
+	// now look for any combination of left and right that satisfies
+	for b, e = right.Next(ctx); b && e == nil; b, e = right.Next(ctx) {
+		for _, l = range leftSlice {
+			r = right.Value()
+			cmp, e = comparator(l, r)
+			if e != nil {
+				return nil, e
+			}
+			if cmp {
+				return newSingletonSequence(newBooleanItem(true)), nil
+			}
+		}
+	}
+	if e != nil {
+		return nil, e
+	}
+	return newSingletonSequence(newBooleanItem(false)), nil
 }

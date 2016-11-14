@@ -152,12 +152,32 @@ func (bt *BinopTree) Evaluate(ctx *Context) (Sequence, error) {
 	var left, right Sequence
 	var leftItem, rightItem Item
 	var err error
+
+	// evaluate either side
 	if left, err = bt.Left.Evaluate(ctx); err != nil {
 		return nil, err
 	}
 	if right, err = bt.Right.Evaluate(ctx); err != nil {
 		return nil, err
 	}
+
+	// dispatch sequence operators
+	switch bt.Operator {
+	case "=":
+		return GeneralComparison(ctx, left, right, CmpEq)
+	case "!=":
+		return GeneralComparison(ctx, left, right, CmpNe)
+	case "<=":
+		return GeneralComparison(ctx, left, right, CmpLe)
+	case "<":
+		return GeneralComparison(ctx, left, right, CmpLt)
+	case ">=":
+		return GeneralComparison(ctx, left, right, CmpGe)
+	case ">":
+		return GeneralComparison(ctx, left, right, CmpGt)
+	}
+
+	// now we get singletons from sequences
 	if leftItem, err = getSingleItem(ctx, left); err != nil {
 		return nil, err
 	}
@@ -165,6 +185,7 @@ func (bt *BinopTree) Evaluate(ctx *Context) (Sequence, error) {
 		return nil, err
 	}
 
+	// dispatch item operators
 	switch bt.Operator {
 	case "+":
 		return leftItem.Type().EvalPlus(leftItem, rightItem)
@@ -181,17 +202,23 @@ func (bt *BinopTree) Evaluate(ctx *Context) (Sequence, error) {
 	case "to":
 		return leftItem.Type().EvalTo(leftItem, rightItem)
 	case "eq":
-		return CmpEq(leftItem, rightItem)
+		v, err := CmpEq(leftItem, rightItem)
+		return newSingletonSequence(newBooleanItem(v)), err
 	case "ne":
-		return CmpNe(leftItem, rightItem)
+		v, err := CmpNe(leftItem, rightItem)
+		return newSingletonSequence(newBooleanItem(v)), err
 	case "le":
-		return CmpLe(leftItem, rightItem)
+		v, err := CmpLe(leftItem, rightItem)
+		return newSingletonSequence(newBooleanItem(v)), err
 	case "lt":
-		return CmpLt(leftItem, rightItem)
+		v, err := CmpLt(leftItem, rightItem)
+		return newSingletonSequence(newBooleanItem(v)), err
 	case "ge":
-		return CmpGe(leftItem, rightItem)
+		v, err := CmpGe(leftItem, rightItem)
+		return newSingletonSequence(newBooleanItem(v)), err
 	case "gt":
-		return CmpGt(leftItem, rightItem)
+		v, err := CmpGt(leftItem, rightItem)
+		return newSingletonSequence(newBooleanItem(v)), err
 	default:
 		return nil, errors.New("not implemented")
 	}
