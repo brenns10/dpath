@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
 	log "github.com/Sirupsen/logrus"
 	"os"
 )
@@ -10,44 +10,44 @@ import (
 A command-line driver for evaluating DPath expressions.
 */
 func main() {
+	var parseTreeBuf bytes.Buffer
+	var r bool
+
 	if len(os.Args) < 2 {
-		fmt.Println("error: must provide DPath expression")
-		return
+		log.Fatal("Must provide a DPath expression.")
 	}
 
 	// Parse the DPath expression.
 	tree, err := ParseString(os.Args[1])
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Fatal("Syntax error.")
 	}
 
-	// Print out the parse tree.
-	fmt.Println("PARSE TREE:")
-	if err = tree.Print(os.Stdout, 0); err != nil {
-		fmt.Println(err)
-		return
-	}
+	// Log the parse tree.
+	parseTreeBuf.WriteString("Parse Tree:\n")
+	tree.Print(&parseTreeBuf, 0)
+	log.WithFields(log.Fields{
+		"tree": parseTreeBuf.String(),
+	}).Debug("Created parse tree.")
 
 	// Evaluate the expression and print the results.
 	ctx := DefaultContext()
 	seq, err := tree.Evaluate(ctx)
 	if err != nil {
-		fmt.Println("ERROR:")
-		fmt.Println(err)
-		return
-	} else {
-		fmt.Println("OUTPUT:")
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Fatal("Error while evaluating expression.")
 	}
-	var r bool
+
 	for r, err = seq.Next(ctx); r && err == nil; r, err = seq.Next(ctx) {
-		if err = seq.Value().Print(os.Stdout); err != nil {
-			fmt.Println(err)
-		}
+		err = seq.Value().Print(os.Stdout)
 	}
 	if err != nil {
-		fmt.Println("Error while iterating:")
-		fmt.Println(err)
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Fatal("Error while iterating.")
 	}
 }
 
@@ -59,5 +59,5 @@ func init() {
 	log.SetOutput(os.Stderr)
 
 	// Only log the warning severity or above.
-	log.SetLevel(log.WarnLevel)
+	log.SetLevel(log.ErrorLevel)
 }

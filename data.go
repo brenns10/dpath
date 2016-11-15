@@ -454,6 +454,11 @@ func (s *DescendantSequence) Next(ctx *Context) (bool, error) {
 				// stack when it's a directory.
 				it := s.Source.Value().(*FileItem)
 				if it.Info.IsDir() {
+					log.WithFields(log.Fields{
+						"axis": "DescendantAxis",
+						"size": len(s.ToVisit),
+						"item": it,
+					}).Debug("Adding item to visit stack.")
 					s.ToVisit = append(s.ToVisit, it)
 				}
 				return true, nil
@@ -463,6 +468,7 @@ func (s *DescendantSequence) Next(ctx *Context) (bool, error) {
 
 		// If the visit stack is empty, we're done
 		if len(s.ToVisit) <= 0 {
+			log.Debug("Iteration ending (visit stack empty).")
 			return false, nil
 		}
 
@@ -470,6 +476,11 @@ func (s *DescendantSequence) Next(ctx *Context) (bool, error) {
 		oldCtx := ctx.ContextItem
 		ctx.ContextItem = s.ToVisit[len(s.ToVisit)-1]
 		s.ToVisit = s.ToVisit[:len(s.ToVisit)-1]
+		log.WithFields(log.Fields{
+			"axis": "DescendantAxis",
+			"size": len(s.ToVisit),
+			"item": ctx.ContextItem,
+		}).Debug("Starting on new source for children.")
 		s.Source, err = AXIS_CHILD.Iterate(ctx)
 		ctx.ContextItem = oldCtx
 
