@@ -49,16 +49,15 @@ Status
   any pair of atomics in the input sequences that satisfy the comparisons.
 * Predicate syntax on sequences, e.g. `(1 to 5)[. mod 2 eq 0]` which evaluates
   to `(2, 4)`.
-* Path expressions that don't involve the shorthand `//`
-* The shorthand notations `*` and `..`
+* Path expressions on the child, parent, and descendant axes
+* The shorthand notations `*`, `..`, `//`
 * The `boolean()` function
 
 ### To-Do
 
-* The descendant axis along with the shorthand `//`
-* Parent and ancestor axes
+* Ancestor axis
 * Attribute axes along with the shorthand `@`
-* Children file and directory axes
+* Children file and directory kinds
 * String handling functions:
     * `concat(args as string...) as string`
     * `substring(s as string, start as integer, end as integer?) as string`
@@ -69,6 +68,8 @@ Status
     * `name(arg as file) as string`
     * `path(arg as file) as string`
 * Shorthand syntax for using names that aren't supported XPath QNames
+* Logging
+* Testing
 
 ### Improvements
 
