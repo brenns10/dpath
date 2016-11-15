@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	log "github.com/Sirupsen/logrus"
 	"io"
 	"os"
 	"path"
@@ -526,22 +527,28 @@ func (a *ChildAxis) Iterate(ctx *Context) (Sequence, error) {
 	}
 	f, err := os.Open(ctxItem.Path)
 	if err != nil {
-		return nil, errors.New(
-			"Error while attempting to Open() context item.",
-		)
+		f.Close()
+		log.WithFields(log.Fields{
+			"error": err,
+			"axis":  "ChildAxis",
+		}).Warn("Error encountered while calling Open().")
+		return newEmptySequence(), nil
 	}
 	contents, err := f.Readdir(0)
 	if err != nil {
 		f.Close()
-		return nil, errors.New(
-			"Error while attempting to Readdir() context item.",
-		)
+		log.WithFields(log.Fields{
+			"error": err,
+			"axis":  "ChildAxis",
+		}).Warn("Error encountered while calling Readdir().")
+		return newEmptySequence(), nil
 	}
 
 	children := make([]Item, 0, len(contents))
 	for _, info := range contents {
 		children = append(children, newFileItemFromInfo(info, ctxItem.Path))
 	}
+	f.Close()
 
 	return newWrapperSequence(children), nil
 }

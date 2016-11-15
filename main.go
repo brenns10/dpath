@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"os"
 )
 
@@ -38,7 +39,8 @@ func main() {
 	} else {
 		fmt.Println("OUTPUT:")
 	}
-	for r, err := seq.Next(ctx); r && err == nil; r, err = seq.Next(ctx) {
+	var r bool
+	for r, err = seq.Next(ctx); r && err == nil; r, err = seq.Next(ctx) {
 		if err = seq.Value().Print(os.Stdout); err != nil {
 			fmt.Println(err)
 		}
@@ -47,4 +49,15 @@ func main() {
 		fmt.Println("Error while iterating:")
 		fmt.Println(err)
 	}
+}
+
+func init() {
+	// Log as JSON instead of the default ASCII formatter.
+	log.SetFormatter(&log.TextFormatter{})
+
+	// Output to stderr instead of stdout, could also be a file.
+	log.SetOutput(os.Stderr)
+
+	// Only log the warning severity or above.
+	log.SetLevel(log.WarnLevel)
 }
