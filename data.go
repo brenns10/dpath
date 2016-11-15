@@ -57,7 +57,7 @@ func DefaultContext() *Context {
 	}
 	return &Context{
 		ContextItem: item,
-		CurrentAxis: newChildAxis(),
+		CurrentAxis: AXIS_CHILD,
 		Namespace:   DefaultNamespace(),
 	}
 }
@@ -72,6 +72,13 @@ type Axis interface {
 	GetByName(ctx *Context, name string) (Sequence, error)
 	Iterate(ctx *Context) (Sequence, error)
 }
+
+/*
+Some axes
+*/
+var (
+	AXIS_CHILD = &ChildAxis{}
+)
 
 /*
 A "dummy" implementation of an item so that we can have some stub implementations

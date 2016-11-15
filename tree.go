@@ -484,7 +484,16 @@ func newKindTree(s string) *KindTree {
 	return &KindTree{Kind: s}
 }
 
-func (bt *KindTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
+func (bt *KindTree) Evaluate(ctx *Context) (Sequence, error) {
+	switch bt.Kind {
+	case "..":
+		return AXIS_CHILD.GetByName(ctx, "..")
+	case "*":
+		return ctx.CurrentAxis.Iterate(ctx)
+	default:
+		return nil, errors.New("Not implemented.")
+	}
+}
 
 func (t *KindTree) Print(r io.Writer, indent int) error {
 	indentStr := getIndent(indent)
