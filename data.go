@@ -77,8 +77,9 @@ type Axis interface {
 Some axes
 */
 var (
-	AXIS_CHILD  = &ChildAxis{}
-	AXIS_PARENT = &ParentAxis{}
+	AXIS_CHILD      = &ChildAxis{}
+	AXIS_PARENT     = &ParentAxis{}
+	AXIS_DESCENDANT = &DescendantAxis{}
 )
 
 /*
@@ -295,6 +296,35 @@ OUTER:
 }
 
 /*
+ConditionFilter is much simpler than ExpressionFilter. It takes a source sequence
+and yields items from it that satisfy a condition function supplied to it.
+*/
+type ConditionFilter struct {
+	Source  Sequence
+	Current Item
+	Filter  func(Item) bool
+}
+
+func newConditionFilter(src Sequence, cond func(Item) bool) *ConditionFilter {
+	return &ConditionFilter{Source: src, Filter: cond}
+}
+
+func (f *ConditionFilter) Value() Item {
+	return f.Current
+}
+
+func (f *ConditionFilter) Next(ctx *Context) (bool, error) {
+	var e error = nil
+	for r, e := f.Source.Next(ctx); r && e == nil; r, e = f.Source.Next(ctx) {
+		f.Current = f.Source.Value()
+		if f.Filter(f.Current) {
+			return true, nil
+		}
+	}
+	return false, e
+}
+
+/*
 PathSequence takes items from the source, makes them the context item, and
 then yields from the sequence returned by the path.
 */
@@ -350,6 +380,69 @@ func (s *PathSequence) Next(ctx *Context) (b bool, e error) {
 func (s *PathSequence) Value() Item {
 	if s.Source != nil {
 		return s.Source.Value()
+	} else {
+		return nil
+	}
+}
+
+/*
+DescendentSequence implements the entire DescendantAxis, since there is not a
+really nicer way to do GetByName on it. It implements a depth-first search of
+the descendant tree by using the ToVisit slice as a stack.
+*/
+type DescendantSequence struct {
+	Source  Sequence
+	ToVisit []*FileItem
+}
+
+func newDescendantSequence(start *FileItem) *DescendantSequence {
+	return &DescendantSequence{Source: nil, ToVisit: []*FileItem{start}}
+}
+
+func (s *DescendantSequence) Next(ctx *Context) (bool, error) {
+	var err error = nil
+	var hasNext bool
+	for {
+		if s.Source != nil {
+			// Try to the source sequence
+			hasNext, err = s.Source.Next(ctx)
+			if err != nil {
+				return false, err
+			} else if hasNext {
+				return true, nil
+			}
+			// Continue on if no error and the source sequence is empty.
+		}
+
+		// If the visit stack is empty, we're done
+		if len(s.ToVisit) <= 0 {
+			return false, nil
+		}
+
+		// Get a new source.
+		oldCtx := ctx.ContextItem
+		ctx.ContextItem = s.ToVisit[len(s.ToVisit)-1]
+		s.ToVisit = s.ToVisit[:len(s.ToVisit)-1]
+		s.Source, err = AXIS_CHILD.Iterate(ctx)
+		ctx.ContextItem = oldCtx
+
+		if err != nil {
+			return false, err
+		}
+
+		// Fall through back to the top of the loop to try to get stuff from
+		// the source again.
+	}
+}
+
+func (s *DescendantSequence) Value() Item {
+	if s.Source != nil {
+		// Make sure to add directories to the visit queue as we see them.
+		it := s.Source.Value().(*FileItem)
+		if it.Info.IsDir() {
+			s.ToVisit = append(s.ToVisit, it)
+		}
+		return it
 	} else {
 		return nil
 	}
@@ -464,4 +557,33 @@ func (a *ParentAxis) Iterate(ctx *Context) (Sequence, error) {
 	}
 
 	return newSingletonSequence(newItem), nil
+}
+
+/*
+DescendantAxis is the most tricky and inefficient axis, as it includes all sub
+nodes of the context node.
+*/
+type DescendantAxis struct {
+}
+
+func (a *DescendantAxis) Iterate(ctx *Context) (Sequence, error) {
+	source, ok := ctx.ContextItem.(*FileItem)
+	if !ok {
+		return nil, errors.New(
+			"Attempting to use DescendantAxis when context item is not a file.",
+		)
+	}
+	return newDescendantSequence(source), nil
+}
+
+func (a *DescendantAxis) GetByName(ctx *Context, name string) (Sequence, error) {
+	seq, _ := a.Iterate(ctx)
+	// can ignore error because it's always nil (look up a few lines)
+	return newConditionFilter(
+		seq,
+		func(i Item) bool {
+			fi := i.(*FileItem)
+			return fi.Info.Name() == name
+		},
+	), nil
 }
