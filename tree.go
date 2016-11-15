@@ -573,19 +573,27 @@ func (bt *PathTree) Evaluate(ctx *Context) (Sequence, error) {
 	// BUG(stephen) currently this does not support the descendant axis shorthand
 	// We know we have at least two items in the path due to the grammar.
 	var err error = nil
-	oldContext := ctx.ContextItem
+	var Source Sequence
+	pathToIterate := bt.Path
+
 	if bt.Rooted {
-		ctx.ContextItem, err = newFileItem("/")
+		// When the path is rooted, we behave as if the path started with a step
+		// expression that returned the root directory.
+		rootItem, err := newFileItem("/")
 		if err != nil {
 			panic("Falied to set root as context item!")
 		}
+		Source = newSingletonSequence(rootItem)
+	} else {
+		// Otherwise, we use the first step expression as the source
+		Source, err = bt.Path[0].Evaluate(ctx)
+		if err != nil {
+			return nil, err
+		}
+		pathToIterate = bt.Path[1:]
 	}
-	Source, err := bt.Path[0].Evaluate(ctx)
-	ctx.ContextItem = oldContext
-	if err != nil {
-		return nil, err
-	}
-	for _, pathItem := range bt.Path[1:] {
+	// This "reduces" the path to a chain of PathSequences
+	for _, pathItem := range pathToIterate {
 		if pathItem == nil {
 			pathItem = newAxisTree("descendant-or-self", newKindTree("*"))
 		}
