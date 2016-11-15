@@ -315,6 +315,67 @@ OUTER:
 }
 
 /*
+PathSequence takes items from the source, makes them the context item, and
+then yields from the sequence returned by the path.
+*/
+type PathSequence struct {
+	CtxSource  Sequence
+	Expression ParseTree
+	Source     Sequence
+}
+
+func newPathSequence(src Sequence, expr ParseTree) *PathSequence {
+	return &PathSequence{CtxSource: src, Expression: expr, Source: nil}
+}
+
+func (s *PathSequence) Next(ctx *Context) (b bool, e error) {
+	var err error = nil
+	var hasNext bool
+	for {
+		if s.Source != nil {
+			// Replace the context item with the one from the previous point
+			// in the path. Then attempt to advance the source sequence.
+			oldCtx := ctx.ContextItem
+			ctx.ContextItem = s.CtxSource.Value()
+			hasNext, err = s.Source.Next(ctx)
+			ctx.ContextItem = oldCtx
+			if err != nil {
+				return false, err
+			} else if hasNext {
+				return true, nil
+			}
+			// Continue on if no error and the source sequence is empty.
+		}
+
+		// Get a new context item.
+		hasNext, err = s.CtxSource.Next(ctx)
+		if !hasNext || err != nil {
+			// Return if we're out of context items, or if we've got an error.
+			return hasNext, err
+		}
+
+		// Evaluate the path expression to get a source
+		oldCtx := ctx.ContextItem
+		ctx.ContextItem = s.CtxSource.Value()
+		s.Source, err = s.Expression.Evaluate(ctx)
+		ctx.ContextItem = oldCtx
+		if err != nil {
+			return false, err
+		}
+		// Fall through back to the top of the loop to try to get stuff from
+		// the source again.
+	}
+}
+
+func (s *PathSequence) Value() Item {
+	if s.Source != nil {
+		return s.Source.Value()
+	} else {
+		return nil
+	}
+}
+
+/*
 ChildAxis is the default axis for normal operation.
 */
 type ChildAxis struct {

@@ -555,7 +555,27 @@ func newPathTree(p []ParseTree, r bool) *PathTree {
 	return &PathTree{Path: p, Rooted: r}
 }
 
-func (bt *PathTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
+func (bt *PathTree) Evaluate(ctx *Context) (Sequence, error) {
+	// BUG(stephen) currently this does not support the descendant axis shorthand
+	// We know we have at least two items in the path due to the grammar.
+	var err error = nil
+	oldContext := ctx.ContextItem
+	if bt.Rooted {
+		ctx.ContextItem, err = newFileItem("/")
+		if err != nil {
+			panic("Falied to set root as context item!")
+		}
+	}
+	Source, err := bt.Path[0].Evaluate(ctx)
+	ctx.ContextItem = oldContext
+	if err != nil {
+		return nil, err
+	}
+	for _, pathItem := range bt.Path[1:] {
+		Source = newPathSequence(Source, pathItem)
+	}
+	return Source, nil
+}
 
 func (pt *PathTree) Print(r io.Writer, indent int) error {
 	var e error
