@@ -409,6 +409,12 @@ func (s *DescendantSequence) Next(ctx *Context) (bool, error) {
 			if err != nil {
 				return false, err
 			} else if hasNext {
+				// If there is a next item, get it and add it to the visit
+				// stack when it's a directory.
+				it := s.Source.Value().(*FileItem)
+				if it.Info.IsDir() {
+					s.ToVisit = append(s.ToVisit, it)
+				}
 				return true, nil
 			}
 			// Continue on if no error and the source sequence is empty.
@@ -438,11 +444,7 @@ func (s *DescendantSequence) Next(ctx *Context) (bool, error) {
 func (s *DescendantSequence) Value() Item {
 	if s.Source != nil {
 		// Make sure to add directories to the visit queue as we see them.
-		it := s.Source.Value().(*FileItem)
-		if it.Info.IsDir() {
-			s.ToVisit = append(s.ToVisit, it)
-		}
-		return it
+		return s.Source.Value().(*FileItem)
 	} else {
 		return nil
 	}
