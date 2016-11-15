@@ -6,7 +6,7 @@ implementation of an XQuery-like language for file system queries. For example,
 the DPath query below would match every PNG file in the current directory tree:
 
 ```
-.//*[ends-with(name(), ".png")]
+.//.[ends-with(name(), ".png")]
 ```
 
 Setup
@@ -21,17 +21,11 @@ $ go get github.com/blynn/nex
 $ go generate
 $ go build
 $ ./dpath '../../*/*'
-PARSE TREE:
-PATH
-  ..
-  ..
-  *
-  *
-OUTPUT:
 file:/home/stephen/go/src/github.com/brenns10/dpath
 file:/home/stephen/go/src/github.com/brenns10/gochat
 file:/home/stephen/go/src/github.com/stretchr/testify
 file:/home/stephen/go/src/github.com/blynn/nex
+file:/home/stephen/go/src/github.com/Sirupsen/logrus
 ```
 
 Status
