@@ -182,7 +182,7 @@ AxisStep:       NodeStep {$$ = $1}
                 ;
 
 NodeStep:       QNAME AXIS NodeTest {$$ = newAxisTree($1, $3)}
-        |       ATTR NodeTest {$$ = newAxisTree("attr", $2)}
+        |       ATTR NodeTest {$$ = newAxisTree("attribute", $2)}
         |       DOTDOT {$$ = newKindTree("..")}
         |       NodeTest {$$ = $1}
                 ;

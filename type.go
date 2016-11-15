@@ -72,17 +72,6 @@ var (
 		EvalModulus:       Unsupported("mod"),
 		EvalTo:            Unsupported("to"),
 	}
-	TYPE_DUMMY = &Type{
-		Name:              "dummy",
-		Compare:           nil,
-		EvalPlus:          Unsupported("+"),
-		EvalMinus:         Unsupported("-"),
-		EvalMultiply:      Unsupported("*"),
-		EvalDivide:        Unsupported("div"),
-		EvalIntegerDivide: Unsupported("idiv"),
-		EvalModulus:       Unsupported("mod"),
-		EvalTo:            Unsupported("to"),
-	}
 )
 
 /*
@@ -196,10 +185,6 @@ func FileCompare(left, right Item, rel bool) (int64, error) {
 	} else {
 		return int64(1), nil
 	}
-}
-
-func DummyCompare(left, right Item, rel bool) (int64, error) {
-	return int64(0), incomparableError(left, right)
 }
 
 /*
@@ -329,7 +314,6 @@ func init() {
 	TYPE_DOUBLE.Compare = DoubleCompare
 	TYPE_BOOLEAN.Compare = BooleanCompare
 	TYPE_STRING.Compare = StringCompare
-	TYPE_DUMMY.Compare = DummyCompare
 	TYPE_FILE.Compare = FileCompare
 
 	TYPE_INTEGER.EvalPlus = EvalPlusID

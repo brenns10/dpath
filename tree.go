@@ -487,7 +487,7 @@ func newKindTree(s string) *KindTree {
 func (bt *KindTree) Evaluate(ctx *Context) (Sequence, error) {
 	switch bt.Kind {
 	case "..":
-		return AXIS_CHILD.GetByName(ctx, "..")
+		return AXIS_PARENT.Iterate(ctx)
 	case "*":
 		return ctx.CurrentAxis.Iterate(ctx)
 	default:
@@ -519,22 +519,6 @@ func (t *NameTree) Print(r io.Writer, indent int) error {
 	return e
 }
 
-type AttrTree struct {
-	Attr string
-}
-
-func newAttrTree(s string) *AttrTree {
-	return &AttrTree{Attr: s}
-}
-
-func (bt *AttrTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
-
-func (t *AttrTree) Print(r io.Writer, indent int) error {
-	indentStr := getIndent(indent)
-	_, e := io.WriteString(r, indentStr+"Attr("+t.Attr+")\n")
-	return e
-}
-
 type AxisTree struct {
 	Axis       string
 	Expression ParseTree
@@ -544,7 +528,24 @@ func newAxisTree(a string, e ParseTree) *AxisTree {
 	return &AxisTree{Axis: a, Expression: e}
 }
 
-func (bt *AxisTree) Evaluate(ctx *Context) (Sequence, error) { return &DummySequence{}, nil }
+func (bt *AxisTree) Evaluate(ctx *Context) (Sequence, error) {
+	oldAxis := ctx.CurrentAxis
+	var err error = nil
+	var ret Sequence = nil
+	switch bt.Axis {
+	case "child":
+		ctx.CurrentAxis = AXIS_CHILD
+	case "parent":
+		ctx.CurrentAxis = AXIS_PARENT
+	default:
+		err = errors.New(fmt.Sprintf("Axis %s not implemented.", bt.Axis))
+		goto cleanup
+	}
+	ret, err = bt.Expression.Evaluate(ctx)
+cleanup:
+	ctx.CurrentAxis = oldAxis
+	return ret, err
+}
 
 func (t *AxisTree) Print(r io.Writer, indent int) error {
 	var e error

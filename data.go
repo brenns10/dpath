@@ -77,21 +77,9 @@ type Axis interface {
 Some axes
 */
 var (
-	AXIS_CHILD = &ChildAxis{}
+	AXIS_CHILD  = &ChildAxis{}
+	AXIS_PARENT = &ParentAxis{}
 )
-
-/*
-A "dummy" implementation of an item so that we can have some stub implementations
-of interfaces.
-*/
-type DummyItem struct{}
-
-func (d *DummyItem) Type() *Type { return TYPE_DUMMY }
-
-func (d *DummyItem) Print(w io.Writer) error {
-	_, err := io.WriteString(w, "dummy\n")
-	return err
-}
 
 /*
 An integer!
@@ -193,21 +181,6 @@ func newFileItem(absPath string) (*FileItem, error) {
 func newFileItemFromInfo(info os.FileInfo, parent string) *FileItem {
 	absPath := path.Join(parent, info.Name())
 	return &FileItem{Path: absPath, Info: info}
-}
-
-/*
-A "dummy" implementation of a sequence for stub implementations.
-It looks like it will yield a dummy item, but really it's empty since Next()
-always returns false.
-*/
-type DummySequence struct{}
-
-func (d *DummySequence) Value() Item {
-	return &DummyItem{}
-}
-
-func (d *DummySequence) Next(ctx *Context) (bool, error) {
-	return false, nil
 }
 
 /*
@@ -436,4 +409,59 @@ func (a *ChildAxis) Iterate(ctx *Context) (Sequence, error) {
 	}
 
 	return newWrapperSequence(children), nil
+}
+
+/*
+ParentAxis contains only the parent of a file.
+*/
+type ParentAxis struct {
+}
+
+func newParentAxis() *ParentAxis {
+	return &ParentAxis{}
+}
+
+func (a *ParentAxis) GetByName(ctx *Context, name string) (Sequence, error) {
+	ctxItem, ok := ctx.ContextItem.(*FileItem)
+	if !ok {
+		return nil, errors.New(
+			"Attempting to use ParentAxis when context item is not a file.",
+		)
+	}
+	path := path.Join(ctxItem.Path, "..")
+	if path == ctxItem.Path {
+		// tried to access parent of root! sneaky...
+		return newEmptySequence(), nil
+	}
+	newItem, err := newFileItem(path)
+	if err != nil {
+		panic("error finding parent of file node")
+	}
+
+	// Since this is GetByName
+	if newItem.Info.Name() == name {
+		return newSingletonSequence(newItem), nil
+	} else {
+		return newEmptySequence(), nil
+	}
+}
+
+func (a *ParentAxis) Iterate(ctx *Context) (Sequence, error) {
+	ctxItem, ok := ctx.ContextItem.(*FileItem)
+	if !ok {
+		return nil, errors.New(
+			"Attempting to use ParentAxis when context item is not a file.",
+		)
+	}
+	path := path.Join(ctxItem.Path, "..")
+	if path == ctxItem.Path {
+		// tried to access parent of root! sneaky...
+		return newEmptySequence(), nil
+	}
+	newItem, err := newFileItem(path)
+	if err != nil {
+		panic("error finding parent of file node")
+	}
+
+	return newSingletonSequence(newItem), nil
 }

@@ -26,8 +26,6 @@ func assertSingleton(t *testing.T, ctx *Context, seq Sequence) Item {
 }
 
 func assertEmptySequence(t *testing.T, ctx *Context, seq Sequence) {
-	_, ok := seq.(*DummySequence)
-	assert.False(t, ok)
 	hasNext, err := seq.Next(ctx)
 	assert.Nil(t, err)
 	assert.False(t, hasNext)
