@@ -61,8 +61,13 @@ Status
 * Children file and directory axes
 * String handling functions:
     * `concat(args as string...) as string`
+    * `substring(s as string, start as integer, end as integer?) as string`
+    * `len(s as string) as int`
     * `ends-with(s1 as string, suffix as string) as string`
     * `match(regex as string, target as string)`
+* File functions:
+    * `name(arg as file) as string`
+    * `path(arg as file) as string`
 * Shorthand syntax for using names that aren't supported XPath QNames
 
 ### Improvements
