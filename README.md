@@ -6,26 +6,68 @@ implementation of an XQuery-like language for file system queries. For example,
 the DPath query below would match every PNG file in the current directory tree:
 
 ```
-.//file()[ends-with(name(), ".png")]
+.//*[ends-with(name(), ".png")]
 ```
 
-Currently I have a lexer, parser, and support for evaluating basic arithmetic
-expressions. The main program takes a DPath expression as its first argument and
-outputs a parse tree followed by the result of evaluating the expression.
+Setup
+-----
 
-To try it, clone this repo and run the following.
+I have many features implemented (see below for details). To try it out, follow
+the steps below. Make sure you enclose queries in single quotes so that the
+shell doesn't do any funny business.
 
 ```
 $ go get github.com/blynn/nex
 $ go generate
 $ go build
-$ ./dpath '1 * (3 - 1)'
+$ ./dpath '../../*/*'
 PARSE TREE:
-  1
-*
-    3
-  -
-    1
+PATH
+  ..
+  ..
+  *
+  *
 OUTPUT:
-integer:2
+file:/home/stephen/go/src/github.com/brenns10/dpath
+file:/home/stephen/go/src/github.com/brenns10/gochat
+file:/home/stephen/go/src/github.com/stretchr/testify
+file:/home/stephen/go/src/github.com/blynn/nex
 ```
+
+Status
+------
+
+### Completed
+
+* Lexer
+* Parser
+* Arithmetic expressions on int, double involving operators `+ - * div idiv mod`
+* Range expressions for numeric types, e.g. `(1 to 5)` which evaluates to `(1,
+  2, 3, 4, 5)`.
+* Value (`= != <= < >= >`) and General (`eq ne le lt ge gt`) comparisons. The
+  difference being that Value requires singletons, whereas General will look for
+  any pair of atomics in the input sequences that satisfy the comparisons.
+* Predicate syntax on sequences, e.g. `(1 to 5)[. mod 2 eq 0]` which evaluates
+  to `(2, 4)`.
+* Path expressions that don't involve the shorthand `//`
+* The shorthand notations `*` and `..`
+* The `boolean()` function
+
+### To-Do
+
+* The descendant axis along with the shorthand `//`
+* Parent and ancestor axes
+* Attribute axes along with the shorthand `@`
+* Children file and directory axes
+* String handling functions:
+    * `concat(args as string...) as string`
+    * `ends-with(s1 as string, suffix as string) as string`
+    * `match(regex as string, target as string)`
+* Shorthand syntax for using names that aren't supported XPath QNames
+
+### Improvements
+
+* Currently, the predicate feature is not properly implemented with regard to
+  numeric indices. It doesn't really matter because I don't guarantee the order
+  of items from axes. So a future improvement is to guarantee forward/reverse
+  order of files, and then properly implement numeric indices.
