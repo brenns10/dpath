@@ -77,9 +77,10 @@ type Axis interface {
 Some axes
 */
 var (
-	AXIS_CHILD      = &ChildAxis{}
-	AXIS_PARENT     = &ParentAxis{}
-	AXIS_DESCENDANT = &DescendantAxis{}
+	AXIS_CHILD              = &ChildAxis{}
+	AXIS_PARENT             = &ParentAxis{}
+	AXIS_DESCENDANT         = &DescendantAxis{}
+	AXIS_DESCENDANT_OR_SELF = &DescendantOrSelfAxis{}
 )
 
 /*
@@ -386,6 +387,45 @@ func (s *PathSequence) Value() Item {
 }
 
 /*
+ConcatenateSequence is a sequence that takes a slice of sequences and yields from
+them in order.
+*/
+type ConcatenateSequence struct {
+	Sources []Sequence
+	Current int
+}
+
+func newConcatenateSequence(sequences ...Sequence) *ConcatenateSequence {
+	return &ConcatenateSequence{Sources: sequences, Current: 0}
+}
+
+func (s *ConcatenateSequence) Next(ctx *Context) (bool, error) {
+	var err error = nil
+	var hasNext bool
+	for {
+		if s.Current >= len(s.Sources) {
+			return false, nil
+		}
+		hasNext, err = s.Sources[s.Current].Next(ctx)
+		if hasNext || err != nil {
+			return hasNext, err
+		}
+		s.Current++
+	}
+}
+
+func (s *ConcatenateSequence) Value() Item {
+	if s.Current <= len(s.Sources) {
+		// Return current source sequence's current value.
+		return s.Sources[s.Current].Value()
+	} else {
+		// If we're finished with all our sources, keep outputting last sequence's
+		// last value.
+		return s.Sources[len(s.Sources)-1].Value()
+	}
+}
+
+/*
 DescendentSequence implements the entire DescendantAxis, since there is not a
 really nicer way to do GetByName on it. It implements a depth-first search of
 the descendant tree by using the ToVisit slice as a stack.
@@ -579,13 +619,33 @@ func (a *DescendantAxis) Iterate(ctx *Context) (Sequence, error) {
 }
 
 func (a *DescendantAxis) GetByName(ctx *Context, name string) (Sequence, error) {
-	seq, _ := a.Iterate(ctx)
-	// can ignore error because it's always nil (look up a few lines)
+	seq, err := a.Iterate(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return newConditionFilter(
 		seq,
 		func(i Item) bool {
 			fi := i.(*FileItem)
 			return fi.Info.Name() == name
 		},
+	), nil
+}
+
+/*
+DescendantOrSelfAxis is just the DescendantAxis but with self concatenated.
+*/
+type DescendantOrSelfAxis struct {
+	*DescendantAxis
+}
+
+func (a *DescendantOrSelfAxis) Iterate(ctx *Context) (Sequence, error) {
+	seq, err := a.DescendantAxis.Iterate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return newConcatenateSequence(
+		newSingletonSequence(ctx.ContextItem),
+		seq,
 	), nil
 }

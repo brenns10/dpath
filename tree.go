@@ -539,6 +539,8 @@ func (bt *AxisTree) Evaluate(ctx *Context) (Sequence, error) {
 		ctx.CurrentAxis = AXIS_PARENT
 	case "descendant":
 		ctx.CurrentAxis = AXIS_DESCENDANT
+	case "descendant-or-self":
+		ctx.CurrentAxis = AXIS_DESCENDANT_OR_SELF
 	default:
 		err = errors.New(fmt.Sprintf("Axis %s not implemented.", bt.Axis))
 		goto cleanup
@@ -585,8 +587,7 @@ func (bt *PathTree) Evaluate(ctx *Context) (Sequence, error) {
 	}
 	for _, pathItem := range bt.Path[1:] {
 		if pathItem == nil {
-			// BUG(stephen) this should be descendant-or-self
-			pathItem = newAxisTree("descendant", newKindTree("*"))
+			pathItem = newAxisTree("descendant-or-self", newKindTree("*"))
 		}
 		Source = newPathSequence(Source, pathItem)
 	}
