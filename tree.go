@@ -1,3 +1,9 @@
+/*
+tree.go contains the ParseTree interface and assorted implementations. These
+are used heavily within the parser itself (dpath.y) and also do some of the heavy
+lifting of evaluation.
+*/
+
 package main
 
 import (
@@ -15,106 +21,8 @@ import (
 //go:generate go tool yacc dpath.y
 
 /*
-A utility function that returns a single item in a sequence, raising an error
-if there are zero or >1 items in the sequence.
-*/
-func getSingleItem(ctx *Context, s Sequence) (Item, error) {
-	r, e := s.Next(ctx)
-	if !r {
-		return nil, errors.New("Expected one value, found none.")
-	} else if e != nil {
-		return nil, e
-	}
-	item := s.Value()
-	r, e = s.Next(ctx)
-	if r {
-		return nil, errors.New("Too many values provided to expression.")
-	} else if e != nil {
-		return nil, e
-	}
-	return item, nil
-}
-
-/*
-A utility function that "asserts" at least one item is in a sequence, panicking
-if that's not the case.
-*/
-func panicUnlessOne(ctx *Context, s Sequence) Item {
-	r, e := s.Next(ctx)
-	if !r {
-		panic("There wasn't a value in the sequence.")
-	} else if e != nil {
-		panic("Error getting value from sequence!")
-	}
-	return s.Value()
-}
-
-/*
-Return file value, if you're certain it's a bool.
-Will panic if you're wrong.
-*/
-func getFile(i Item) *FileItem {
-	it := i.(*FileItem)
-	return it
-}
-
-/*
-Return bool value, if you're certain it's a bool.
-Will panic if you're wrong.
-*/
-func getBool(i Item) bool {
-	it := i.(*BooleanItem)
-	return it.Value
-}
-
-/*
-Return string value, if you're certain it's a string.
-Will panic if you're wrong.
-*/
-func getString(i Item) string {
-	it := i.(*StringItem)
-	return it.Value
-}
-
-/*
-Return integer value, if you're certain it's an integer.
-Will panic if you're wrong.
-*/
-func getInteger(i Item) int64 {
-	it := i.(*IntegerItem)
-	return it.Value
-}
-
-/*
-Return double value, if you're certain it's a double.
-Will panic if you're wrong.
-*/
-func getDouble(i Item) float64 {
-	it := i.(*DoubleItem)
-	return it.Value
-}
-
-/*
-Return numeric value as float, if you're certain it's numeric (i.e. integer
-or double).
-Will panic if you're wrong.
-*/
-func getNumericAsFloat(i Item) float64 {
-	if i.TypeName() == TYPE_INTEGER {
-		return float64(getInteger(i))
-	} else {
-		return getDouble(i)
-	}
-}
-
-/*
-Utility function for checking that each argument is one of a list of types.
-The first argument is a slice of string type names. The remaining arguments are
-DPath items to be type checked. Returns false if any item has type not included
-in the type list. Otherwise returns true.
-*/
-/*
-ParseTree is an interface that allows us to easily print and eval code.
+ParseTree is an interface that allows us to easily evaluate and print out code.
+It has an implementation per grammar production.
 */
 type ParseTree interface {
 	Evaluate(ctx *Context) (Sequence, error)
@@ -125,6 +33,10 @@ func getIndent(indent int) string {
 	return strings.Repeat("  ", indent)
 }
 
+/*
+BinopTree holds binary operator productions, including arithmetic and
+comparisons.
+*/
 type BinopTree struct {
 	Operator string
 	Left     ParseTree
@@ -226,6 +138,9 @@ func (bt *BinopTree) Print(r io.Writer, indent int) error {
 	return nil
 }
 
+/*
+UnopTree holds unary operator productions, which is really just plus and minus.
+*/
 type UnopTree struct {
 	Operator string
 	Left     ParseTree
@@ -268,6 +183,9 @@ func (ut *UnopTree) Print(r io.Writer, indent int) error {
 	return nil
 }
 
+/*
+LiteralTree holds a String, Integer, Double, or literal Sequence.
+*/
 type LiteralTree struct {
 	Type          string
 	StringValue   string
@@ -340,6 +258,9 @@ func (lt *LiteralTree) Print(r io.Writer, indent int) error {
 	return nil
 }
 
+/*
+FunccallTree holds function call production.
+*/
 type FunccallTree struct {
 	Function  string
 	Arguments []ParseTree
@@ -391,6 +312,9 @@ func (ft *FunccallTree) Print(r io.Writer, indent int) error {
 	return nil
 }
 
+/*
+ContextItemTree represents the use of . in an expression.
+*/
 type ContextItemTree struct {
 }
 
@@ -408,6 +332,9 @@ func (t *ContextItemTree) Print(r io.Writer, indent int) error {
 	return e
 }
 
+/*
+EmptySequenceTree represents an empty sequence, which is () in the language.
+*/
 type EmptySequenceTree struct {
 }
 
@@ -425,6 +352,9 @@ func (et *EmptySequenceTree) Print(r io.Writer, indent int) error {
 	return e
 }
 
+/*
+FilteredSequenceTree represents a predicate after an expression.
+*/
 type FilteredSequenceTree struct {
 	Source ParseTree
 	Filter []ParseTree
@@ -463,6 +393,10 @@ func (t *FilteredSequenceTree) Print(r io.Writer, indent int) error {
 	return nil
 }
 
+/*
+KindTree represents the special types of kind tests you can have within a step
+expression (such as .. and *)
+*/
 type KindTree struct {
 	Kind string
 }
@@ -488,6 +422,9 @@ func (t *KindTree) Print(r io.Writer, indent int) error {
 	return e
 }
 
+/*
+NameTree represents any time a name occurs inside a step expression.
+*/
 type NameTree struct {
 	Name string
 }
@@ -506,6 +443,10 @@ func (t *NameTree) Print(r io.Writer, indent int) error {
 	return e
 }
 
+/*
+AxisItem represents a step expression that is prefixed by an axis, such as:
+child::filename
+*/
 type AxisTree struct {
 	Axis       string
 	Expression ParseTree
@@ -547,6 +488,10 @@ func (t *AxisTree) Print(r io.Writer, indent int) error {
 	return t.Expression.Print(r, indent+1)
 }
 
+/*
+PathTree holds an entire path expression. Of course, single-step expressions
+are not held in a PathTree (they are typically just NameTrees).
+*/
 type PathTree struct {
 	Path   []ParseTree
 	Rooted bool
