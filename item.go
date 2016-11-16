@@ -1,6 +1,7 @@
 /*
 item.go contains interfaces and structures related to Items, the atomic units of
-the DPath data model.
+the DPath data model. Since much of arithmetic is type-specific, most of the
+arithmetic evaluation is implemented in this code.
 */
 
 package main
@@ -477,6 +478,11 @@ func CmpGt(left, right Item) (bool, error) {
 	return res > 0, err
 }
 
+/*
+Do a "general" comparison between two sequences. A "general" comparison means
+that it searches for any pair of items which satisfies the comparison. On the
+other hand, a value comparison (see above) can only happen between two Items.
+*/
 func GeneralComparison(ctx *Context, left, right Sequence,
 	comparator func(left, right Item) (bool, error)) (Sequence, error) {
 
