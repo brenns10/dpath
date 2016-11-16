@@ -1,63 +1,17 @@
+/*
+axis.go contains data structures related to the context and axes.
+*/
+
 package main
 
 import (
-	"errors"
-	log "github.com/Sirupsen/logrus"
-	"io"
 	"os"
-	"path"
-	"strconv"
 )
 
 /*
-This sub-package contains the interfaces and structures of the "data model".
-
-The data model for DPath closely mirrors XPath. Everything is a "sequence" of
-"items", and sequences are flat. Atomic values are sequences of length one.
-*/
-
-/*
-The item interface is a "generic" interface for any type of item. The only
-required operation is that it can tell us its type, so we can type check and
- cast it to its actual type.
-*/
-type Item interface {
-	Type() *Type
-	Print(w io.Writer) error
-}
-
-/*
-Every DPath expression is evaluated within a context. The context contains
-information such as the current context item (usually the current directory)
-and the current axis (by default, files+subdirs).
-*/
-type Context struct {
-	ContextItem Item
-	CurrentAxis Axis
-	Namespace   map[string]Builtin
-}
-
-func DefaultContext() *Context {
-	wd, err := os.Getwd()
-	if err != nil {
-		panic("Getwd() failed!")
-	}
-	item, err := newFileItem(wd)
-	if err != nil {
-		panic("Lstat() failed!")
-	}
-	return &Context{
-		ContextItem: item,
-		CurrentAxis: AXIS_CHILD,
-		Namespace:   DefaultNamespace(),
-	}
-}
-
-/*
-The axis is the source of file sequences. It needs to be able to get items by
-their names, and also iterate over a list of items. The items could be the files
-within the context directory, or it could be the files within all subdirectories
-of the the context, etc.
+An axis is the source for data in path expressions. It should allow us to get
+files by name and also "iterate" over all items along the axis from the context
+object.
 */
 type Axis interface {
 	GetByName(ctx *Context, name string) (Sequence, error)
@@ -73,108 +27,6 @@ var (
 	AXIS_DESCENDANT         = &DescendantAxis{}
 	AXIS_DESCENDANT_OR_SELF = &DescendantOrSelfAxis{}
 )
-
-/*
-An integer!
-*/
-type IntegerItem struct {
-	Value int64
-}
-
-func (i *IntegerItem) Type() *Type { return TYPE_INTEGER }
-
-func (i *IntegerItem) Print(w io.Writer) error {
-	str := "integer:" + strconv.FormatInt(i.Value, 10) + "\n"
-	_, err := io.WriteString(w, str)
-	return err
-}
-
-func newIntegerItem(v int64) *IntegerItem {
-	return &IntegerItem{Value: v}
-}
-
-/*
-A double!
-*/
-type DoubleItem struct {
-	Value float64
-}
-
-func (i *DoubleItem) Type() *Type { return TYPE_DOUBLE }
-
-func (i *DoubleItem) Print(w io.Writer) error {
-	str := "double:" + strconv.FormatFloat(i.Value, 'f', -1, 64) + "\n"
-	_, err := io.WriteString(w, str)
-	return err
-}
-
-func newDoubleItem(v float64) *DoubleItem {
-	return &DoubleItem{Value: v}
-}
-
-/*
-A string!
-*/
-type StringItem struct {
-	Value string
-}
-
-func (i *StringItem) Type() *Type { return TYPE_STRING }
-
-func (i *StringItem) Print(w io.Writer) error {
-	_, err := io.WriteString(w, "string:\""+i.Value+"\"\n")
-	return err
-}
-
-func newStringItem(v string) *StringItem {
-	return &StringItem{Value: v}
-}
-
-/*
-A boolean!
-*/
-type BooleanItem struct {
-	Value bool
-}
-
-func (i *BooleanItem) Type() *Type { return TYPE_BOOLEAN }
-
-func (i *BooleanItem) Print(w io.Writer) error {
-	_, err := io.WriteString(w, "boolean:"+strconv.FormatBool(i.Value)+"\n")
-	return err
-}
-
-func newBooleanItem(v bool) *BooleanItem {
-	return &BooleanItem{Value: v}
-}
-
-/*
-File item (could be a directory too)!
-*/
-type FileItem struct {
-	Path string
-	Info os.FileInfo
-}
-
-func (i *FileItem) Type() *Type { return TYPE_FILE }
-
-func (i *FileItem) Print(w io.Writer) error {
-	_, err := io.WriteString(w, "file:"+i.Path+"\n")
-	return err
-}
-
-func newFileItem(absPath string) (*FileItem, error) {
-	info, err := os.Lstat(absPath)
-	if err != nil {
-		return nil, err
-	}
-	return &FileItem{Path: absPath, Info: info}, nil
-}
-
-func newFileItemFromInfo(info os.FileInfo, parent string) *FileItem {
-	absPath := path.Join(parent, info.Name())
-	return &FileItem{Path: absPath, Info: info}
-}
 
 /*
 ChildAxis is the default axis for normal operation.
@@ -294,8 +146,8 @@ func (a *ParentAxis) Iterate(ctx *Context) (Sequence, error) {
 }
 
 /*
-DescendantAxis is the most tricky and inefficient axis, as it includes all sub
-nodes of the context node.
+DescendantAxis returns children and children of children. Its implementation is
+mostly found within the DescendantSequence.
 */
 type DescendantAxis struct {
 }
@@ -325,7 +177,7 @@ func (a *DescendantAxis) GetByName(ctx *Context, name string) (Sequence, error) 
 }
 
 /*
-DescendantOrSelfAxis is just the DescendantAxis but with self concatenated.
+DescendantOrSelfAxis is just the DescendantAxis but with self added in.
 */
 type DescendantOrSelfAxis struct {
 	*DescendantAxis
@@ -340,4 +192,37 @@ func (a *DescendantOrSelfAxis) Iterate(ctx *Context) (Sequence, error) {
 		newSingletonSequence(ctx.ContextItem),
 		seq,
 	), nil
+}
+
+/*
+Every DPath expression is evaluated within a context. The context contains
+information such as the current context item (usually the current directory)
+and the current axis (by default, children).
+*/
+type Context struct {
+	ContextItem Item
+	CurrentAxis Axis
+	Namespace   map[string]Builtin
+}
+
+/*
+DefaultContext returns a Context object where the current item is the current
+directory, the axis is the child axis, and the namespace is filled with all the
+builtin functions. You need to call this to get a context before evaluating
+a parsed expression.
+*/
+func DefaultContext() *Context {
+	wd, err := os.Getwd()
+	if err != nil {
+		panic("Getwd() failed!")
+	}
+	item, err := newFileItem(wd)
+	if err != nil {
+		panic("Lstat() failed!")
+	}
+	return &Context{
+		ContextItem: item,
+		CurrentAxis: AXIS_CHILD,
+		Namespace:   DefaultNamespace(),
+	}
 }
