@@ -5,7 +5,10 @@ axis.go contains data structures related to the context and axes.
 package main
 
 import (
+	"errors"
+	log "github.com/Sirupsen/logrus"
 	"os"
+	"path"
 )
 
 /*

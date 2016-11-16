@@ -1,12 +1,11 @@
 /*
-item.go interfaces and structures related to Items, the atomic units of DPath.
+item.go contains interfaces and structures related to Items, the atomic units of
+the DPath data model.
 */
 
 package main
 
 import (
-	"errors"
-	log "github.com/Sirupsen/logrus"
 	"io"
 	"os"
 	"path"
