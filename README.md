@@ -9,23 +9,40 @@ the DPath query below would match every PNG file in the current directory tree:
 .//.[ends-with(name(), ".png")]
 ```
 
-Setup
+Usage
 -----
 
-I have many features implemented (see below for details). To try it out, follow
-the steps below. Make sure you enclose queries in single quotes so that the
-shell doesn't do any funny business.
+### Setup
 
-```
-$ go get github.com/blynn/nex
+This will get you where you need to go, although there may be a "better way".
+
+```bash
+$ export GOPATH=~/go
+$ export PATH=$GOPATH/bin:$PATH
+$ go get -t github.com/blynn/nex github.com/brenns10/dpath
+# this will give an error, ignore it
+$ cd $GOPATH/src/github.com/brenns10/dpath
 $ go generate
 $ go build
-$ ./dpath '../../*/*'
-file:/home/stephen/go/src/github.com/brenns10/dpath
-file:/home/stephen/go/src/github.com/brenns10/gochat
-file:/home/stephen/go/src/github.com/stretchr/testify
-file:/home/stephen/go/src/github.com/blynn/nex
-file:/home/stephen/go/src/github.com/Sirupsen/logrus
+$ go test
+```
+
+### Usage
+
+You can `go install` once you've done `go generate`, which will put the `dpath`
+command in your Go binary directory, which is hopefully in your `$PATH`. From
+there, try some queries:
+
+```bash
+$ dpath './/.'
+# recursively lists this subdirectory and everything under it
+
+$ dpath '//.'
+# recursively lists everything in the filesystem
+# on second thought, don't do that
+
+$ dpath '(1 to 10)[. mod 3 eq 1]'
+# lists numbers with remainder 1 when divided by 3 :)
 ```
 
 Status
