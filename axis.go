@@ -12,9 +12,19 @@ import (
 )
 
 /*
-An axis is the source for data in path expressions. It should allow us to get
-files by name and also "iterate" over all items along the axis from the context
-object.
+An axis is the source for data in path expressions. You can think of an axis as
+a "direction" that you can travel from an item. It should be able to take a
+context item and give us additional items in that direction from the node. For
+instance, in a file system, the child axis returns contents of a directory.
+
+The interface for Axis specifies two functions. You could get away with just an
+Iterate() function, but GetByName() can make finding files within an axis much
+more efficient... why list a directory and then search through the listing when
+you could just stat() the file and handle the error if it doesn't exist?
+
+Anyway, GetByName() returns a sequence of items from the Axis matching a name.
+Iterate() returns all the items in the axis (from the context item) in a
+sequence.
 */
 type Axis interface {
 	GetByName(ctx *Context, name string) (Sequence, error)
