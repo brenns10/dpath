@@ -86,10 +86,10 @@ func getInteger(i Item) int64 {
 }
 
 /*
-Return float value, if you're certain it's a float.
+Return double value, if you're certain it's a double.
 Will panic if you're wrong.
 */
-func getFloat(i Item) float64 {
+func getDouble(i Item) float64 {
 	it := i.(*DoubleItem)
 	return it.Value
 }
@@ -100,10 +100,10 @@ or double).
 Will panic if you're wrong.
 */
 func getNumericAsFloat(i Item) float64 {
-	if i.Type() == TYPE_INTEGER {
+	if i.TypeName() == TYPE_INTEGER {
 		return float64(getInteger(i))
 	} else {
-		return getFloat(i)
+		return getDouble(i)
 	}
 }
 
@@ -113,19 +113,6 @@ The first argument is a slice of string type names. The remaining arguments are
 DPath items to be type checked. Returns false if any item has type not included
 in the type list. Otherwise returns true.
 */
-func typeCheck(types []*Type, args ...Item) bool {
-OUTER:
-	for _, arg := range args {
-		for _, typ := range types {
-			if arg.Type() == typ {
-				continue OUTER
-			}
-		}
-		return false
-	}
-	return true
-}
-
 /*
 ParseTree is an interface that allows us to easily print and eval code.
 */
@@ -188,19 +175,19 @@ func (bt *BinopTree) Evaluate(ctx *Context) (Sequence, error) {
 	// dispatch item operators
 	switch bt.Operator {
 	case "+":
-		return leftItem.Type().EvalPlus(leftItem, rightItem)
+		return leftItem.EvalPlus(rightItem)
 	case "-":
-		return leftItem.Type().EvalMinus(leftItem, rightItem)
+		return leftItem.EvalMinus(rightItem)
 	case "*":
-		return leftItem.Type().EvalMultiply(leftItem, rightItem)
+		return leftItem.EvalMultiply(rightItem)
 	case "div":
-		return leftItem.Type().EvalDivide(leftItem, rightItem)
+		return leftItem.EvalDivide(rightItem)
 	case "idiv":
-		return leftItem.Type().EvalIntegerDivide(leftItem, rightItem)
+		return leftItem.EvalIntegerDivide(rightItem)
 	case "mod":
-		return leftItem.Type().EvalModulus(leftItem, rightItem)
+		return leftItem.EvalModulus(rightItem)
 	case "to":
-		return leftItem.Type().EvalTo(leftItem, rightItem)
+		return leftItem.EvalTo(rightItem)
 	case "eq":
 		v, err := CmpEq(leftItem, rightItem)
 		return newSingletonSequence(newBooleanItem(v)), err
@@ -257,15 +244,15 @@ func (ut *UnopTree) Evaluate(ctx *Context) (Sequence, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !typeCheck([]*Type{TYPE_INTEGER, TYPE_DOUBLE}, item) {
+	if item.TypeName() != TYPE_INTEGER && item.TypeName() != TYPE_DOUBLE {
 		return nil, errors.New("unary operator expects numeric type")
 	}
 	if ut.Operator == "+" {
 		return newSingletonSequence(item), nil
-	} else if item.Type() == TYPE_INTEGER {
+	} else if item.TypeName() == TYPE_INTEGER {
 		return newSingletonSequence(newIntegerItem(-getInteger(item))), nil
 	} else {
-		return newSingletonSequence(newDoubleItem(-getFloat(item))), nil
+		return newSingletonSequence(newDoubleItem(-getDouble(item))), nil
 	}
 }
 
@@ -282,7 +269,7 @@ func (ut *UnopTree) Print(r io.Writer, indent int) error {
 }
 
 type LiteralTree struct {
-	Type          *Type
+	Type          string
 	StringValue   string
 	IntegerValue  int64
 	DoubleValue   float64
@@ -345,7 +332,7 @@ func (lt *LiteralTree) Print(r io.Writer, indent int) error {
 	case TYPE_DOUBLE:
 		output = strconv.FormatFloat(lt.DoubleValue, 'f', -1, 64)
 	default:
-		output = lt.Type.Name
+		output = lt.Type
 	}
 	if _, e = io.WriteString(r, indentStr+output+"\n"); e != nil {
 		return e

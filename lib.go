@@ -56,7 +56,7 @@ func BuiltinBooleanInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 	}
 	if hasNext {
 		// NOT A SINGLETON
-		if item.Type() == TYPE_FILE {
+		if item.TypeName() == TYPE_FILE {
 			// Case 2, true!
 			value = true
 		} else {
@@ -65,7 +65,7 @@ func BuiltinBooleanInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 		}
 	} else {
 		// SINGLETON
-		switch item.Type() {
+		switch item.TypeName() {
 		case TYPE_BOOLEAN:
 			// Case 3
 			return newSingletonSequence(item), nil
@@ -74,13 +74,13 @@ func BuiltinBooleanInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 			value = getInteger(item) != int64(0)
 		case TYPE_DOUBLE:
 			// Case 5
-			value = getFloat(item) != float64(0.0) && !math.IsNaN(getFloat(item))
+			value = getDouble(item) != float64(0.0) && !math.IsNaN(getDouble(item))
 		case TYPE_STRING:
 			// Case 4
 			value = len(getString(item)) > 0
 		default:
 			errorMsg := "type error in boolean(): unexpected singleton type "
-			errorMsg += item.Type().Name
+			errorMsg += item.TypeName()
 			return nil, errors.New(errorMsg)
 		}
 	}

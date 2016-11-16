@@ -34,7 +34,7 @@ func assertEmptySequence(t *testing.T, ctx *Context, seq Sequence) {
 func TestIntegerLiteral(t *testing.T) {
 	seq, ctx := assertEvaluates(t, "1989")
 	item := assertSingleton(t, ctx, seq)
-	assert.Equal(t, item.Type(), TYPE_INTEGER)
+	assert.Equal(t, item.TypeName(), TYPE_INTEGER)
 	intItem := item.(*IntegerItem)
 	assert.Equal(t, int64(1989), intItem.Value)
 }
@@ -42,7 +42,7 @@ func TestIntegerLiteral(t *testing.T) {
 func TestDecimalLiteral(t *testing.T) {
 	seq, ctx := assertEvaluates(t, "1.234")
 	item := assertSingleton(t, ctx, seq)
-	assert.Equal(t, item.Type(), TYPE_DOUBLE)
+	assert.Equal(t, item.TypeName(), TYPE_DOUBLE)
 	doubleItem := item.(*DoubleItem)
 	assert.Equal(t, 1.234, doubleItem.Value)
 }
@@ -50,7 +50,7 @@ func TestDecimalLiteral(t *testing.T) {
 func TestFloatLiteral(t *testing.T) {
 	seq, ctx := assertEvaluates(t, "1.0e-1")
 	item := assertSingleton(t, ctx, seq)
-	assert.Equal(t, item.Type(), TYPE_DOUBLE)
+	assert.Equal(t, item.TypeName(), TYPE_DOUBLE)
 	doubleItem := item.(*DoubleItem)
 	assert.Equal(t, 1.0e-1, doubleItem.Value)
 }
@@ -58,7 +58,7 @@ func TestFloatLiteral(t *testing.T) {
 func TestStringLiteral(t *testing.T) {
 	seq, ctx := assertEvaluates(t, "'foo'")
 	item := assertSingleton(t, ctx, seq)
-	assert.Equal(t, item.Type(), TYPE_STRING)
+	assert.Equal(t, item.TypeName(), TYPE_STRING)
 	stringItem := item.(*StringItem)
 	assert.Equal(t, "foo", stringItem.Value)
 }
@@ -66,7 +66,7 @@ func TestStringLiteral(t *testing.T) {
 func TestStringEscapes(t *testing.T) {
 	seq, ctx := assertEvaluates(t, "\"bar\"\"\"")
 	item := assertSingleton(t, ctx, seq)
-	assert.Equal(t, item.Type(), TYPE_STRING)
+	assert.Equal(t, item.TypeName(), TYPE_STRING)
 	stringItem := item.(*StringItem)
 	assert.Equal(t, "bar\"", stringItem.Value)
 }
@@ -79,7 +79,7 @@ func TestEmptySequence(t *testing.T) {
 func TestAdditionIntegers(t *testing.T) {
 	seq, ctx := assertEvaluates(t, "1 + 1")
 	item := assertSingleton(t, ctx, seq)
-	assert.Equal(t, item.Type(), TYPE_INTEGER)
+	assert.Equal(t, item.TypeName(), TYPE_INTEGER)
 	intItem := item.(*IntegerItem)
 	assert.Equal(t, int64(2), intItem.Value)
 }
@@ -89,7 +89,7 @@ func TestAdditionDoubles(t *testing.T) {
 	for _, uut := range cases {
 		seq, ctx := assertEvaluates(t, uut)
 		item := assertSingleton(t, ctx, seq)
-		assert.Equal(t, item.Type(), TYPE_DOUBLE)
+		assert.Equal(t, item.TypeName(), TYPE_DOUBLE)
 		doubleItem := item.(*DoubleItem)
 		assert.Equal(t, float64(2.0), doubleItem.Value)
 	}
@@ -98,7 +98,7 @@ func TestAdditionDoubles(t *testing.T) {
 func TestSubtractionIntegers(t *testing.T) {
 	seq, ctx := assertEvaluates(t, "2 - 1")
 	item := assertSingleton(t, ctx, seq)
-	assert.Equal(t, item.Type(), TYPE_INTEGER)
+	assert.Equal(t, item.TypeName(), TYPE_INTEGER)
 	intItem := item.(*IntegerItem)
 	assert.Equal(t, int64(1), intItem.Value)
 }
@@ -108,7 +108,7 @@ func TestSubtractionDoubles(t *testing.T) {
 	for _, uut := range cases {
 		seq, ctx := assertEvaluates(t, uut)
 		item := assertSingleton(t, ctx, seq)
-		assert.Equal(t, item.Type(), TYPE_DOUBLE)
+		assert.Equal(t, item.TypeName(), TYPE_DOUBLE)
 		doubleItem := item.(*DoubleItem)
 		assert.Equal(t, float64(1.0), doubleItem.Value)
 	}
@@ -117,7 +117,7 @@ func TestSubtractionDoubles(t *testing.T) {
 func TestMultiplicationIntegers(t *testing.T) {
 	seq, ctx := assertEvaluates(t, "5 * 3")
 	item := assertSingleton(t, ctx, seq)
-	assert.Equal(t, item.Type(), TYPE_INTEGER)
+	assert.Equal(t, item.TypeName(), TYPE_INTEGER)
 	intItem := item.(*IntegerItem)
 	assert.Equal(t, int64(15), intItem.Value)
 }
@@ -127,7 +127,7 @@ func TestMultiplactionDoubles(t *testing.T) {
 	for _, uut := range cases {
 		seq, ctx := assertEvaluates(t, uut)
 		item := assertSingleton(t, ctx, seq)
-		assert.Equal(t, item.Type(), TYPE_DOUBLE)
+		assert.Equal(t, item.TypeName(), TYPE_DOUBLE)
 		doubleItem := item.(*DoubleItem)
 		assert.Equal(t, float64(15.0), doubleItem.Value)
 	}
@@ -138,7 +138,7 @@ func TestDivision(t *testing.T) {
 	for _, uut := range cases {
 		seq, ctx := assertEvaluates(t, uut)
 		item := assertSingleton(t, ctx, seq)
-		assert.Equal(t, item.Type(), TYPE_DOUBLE)
+		assert.Equal(t, item.TypeName(), TYPE_DOUBLE)
 		doubleItem := item.(*DoubleItem)
 		assert.Equal(t, float64(2.5), doubleItem.Value)
 	}
@@ -149,7 +149,7 @@ func TestIntegerDivision(t *testing.T) {
 	for _, uut := range cases {
 		seq, ctx := assertEvaluates(t, uut)
 		item := assertSingleton(t, ctx, seq)
-		assert.Equal(t, item.Type(), TYPE_INTEGER)
+		assert.Equal(t, item.TypeName(), TYPE_INTEGER)
 		intItem := item.(*IntegerItem)
 		assert.Equal(t, int64(2), intItem.Value)
 	}
@@ -160,7 +160,7 @@ func TestModulusInteger(t *testing.T) {
 	for _, uut := range cases {
 		seq, ctx := assertEvaluates(t, uut)
 		item := assertSingleton(t, ctx, seq)
-		assert.Equal(t, item.Type(), TYPE_INTEGER)
+		assert.Equal(t, item.TypeName(), TYPE_INTEGER)
 		intItem := item.(*IntegerItem)
 		assert.Equal(t, int64(1), intItem.Value)
 	}
@@ -171,7 +171,7 @@ func TestModulusDouble(t *testing.T) {
 	for _, uut := range cases {
 		seq, ctx := assertEvaluates(t, uut)
 		item := assertSingleton(t, ctx, seq)
-		assert.Equal(t, item.Type(), TYPE_DOUBLE)
+		assert.Equal(t, item.TypeName(), TYPE_DOUBLE)
 		doubleItem := item.(*DoubleItem)
 		assert.Equal(t, float64(1.0), doubleItem.Value)
 	}
@@ -197,7 +197,7 @@ func TestBinopIncorrectTypesFail(t *testing.T) {
 func TestUnopPlusInteger(t *testing.T) {
 	seq, ctx := assertEvaluates(t, "+5")
 	item := assertSingleton(t, ctx, seq)
-	assert.Equal(t, item.Type(), TYPE_INTEGER)
+	assert.Equal(t, item.TypeName(), TYPE_INTEGER)
 	intItem := item.(*IntegerItem)
 	assert.Equal(t, int64(5), intItem.Value)
 }
@@ -205,7 +205,7 @@ func TestUnopPlusInteger(t *testing.T) {
 func TestUnopPlusDouble(t *testing.T) {
 	seq, ctx := assertEvaluates(t, "+5.0")
 	item := assertSingleton(t, ctx, seq)
-	assert.Equal(t, item.Type(), TYPE_DOUBLE)
+	assert.Equal(t, item.TypeName(), TYPE_DOUBLE)
 	doubleItem := item.(*DoubleItem)
 	assert.Equal(t, float64(5.0), doubleItem.Value)
 }
@@ -213,7 +213,7 @@ func TestUnopPlusDouble(t *testing.T) {
 func TestUnopMinusInteger(t *testing.T) {
 	seq, ctx := assertEvaluates(t, "-5")
 	item := assertSingleton(t, ctx, seq)
-	assert.Equal(t, item.Type(), TYPE_INTEGER)
+	assert.Equal(t, item.TypeName(), TYPE_INTEGER)
 	intItem := item.(*IntegerItem)
 	assert.Equal(t, int64(-5), intItem.Value)
 }
@@ -221,7 +221,7 @@ func TestUnopMinusInteger(t *testing.T) {
 func TestUnopMinusDouble(t *testing.T) {
 	seq, ctx := assertEvaluates(t, "-5.0")
 	item := assertSingleton(t, ctx, seq)
-	assert.Equal(t, item.Type(), TYPE_DOUBLE)
+	assert.Equal(t, item.TypeName(), TYPE_DOUBLE)
 	doubleItem := item.(*DoubleItem)
 	assert.Equal(t, float64(-5.0), doubleItem.Value)
 }
