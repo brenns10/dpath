@@ -45,7 +45,7 @@ $ dpath '(1 to 10)[. mod 3 eq 1]'
 # lists numbers with remainder 1 when divided by 3 :)
 ```
 
-If you're interested in how this implementation works, I maintain a the
+If you're interested in how this implementation works, I maintain the
 file [GUIDE.md](), which should give some high-level explanation of how the
 language comes together. The low-level details can be read about in comments and
 code.
