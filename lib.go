@@ -6,6 +6,7 @@ utilities necessary to run them.
 package main
 
 import (
+	"bytes"
 	"errors"
 	"math"
 )
@@ -22,6 +23,8 @@ type Builtin struct {
 var (
 	BUILTIN_BOOLEAN = Builtin{
 		Name: "boolean", NumArgs: 1, Invoke: BuiltinBooleanInvoke}
+	BUILTIN_CONCAT = Builtin{
+		Name: "concat", NumArgs: -1, Invoke: BuiltinConcatInvoke}
 )
 
 /*
@@ -94,8 +97,33 @@ func BuiltinBooleanInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 	return newSingletonSequence(newBooleanItem(value)), nil
 }
 
+/*
+Invoke the builtin "concat" function, which takes args, converts them to strings,
+and concatenates them into a single string.
+*/
+func BuiltinConcatInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	var buffer bytes.Buffer
+
+	if len(args) <= 0 {
+		return nil, errors.New("concat() requires at least one argument")
+	}
+	for _, seq := range args {
+		item, err := getSingleItem(ctx, seq)
+		if err != nil {
+			return nil, err
+		}
+		buffer.WriteString(item.ToString())
+	}
+
+	return newSingletonSequence(newStringItem(buffer.String())), nil
+}
+
+/*
+Return a map of each builtin's name to its struct.
+*/
 func DefaultNamespace() map[string]Builtin {
 	return map[string]Builtin{
 		"boolean": BUILTIN_BOOLEAN,
+		"concat":  BUILTIN_CONCAT,
 	}
 }

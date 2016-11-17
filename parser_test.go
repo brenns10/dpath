@@ -5,40 +5,6 @@ import (
 	"testing"
 )
 
-func assertParses(t *testing.T, s string) ParseTree {
-	tree, e := ParseString(s)
-	assert.Nil(t, e)
-	return tree
-}
-
-func assertLiteral(t *testing.T, s string) *LiteralTree {
-	tree := assertParses(t, s)
-	lt, ok := tree.(*LiteralTree)
-	assert.True(t, ok)
-	return lt
-}
-
-func assertQName(t *testing.T, s string) *NameTree {
-	tree := assertParses(t, s)
-	nt, ok := tree.(*NameTree)
-	assert.True(t, ok)
-	return nt
-}
-
-func assertBinop(t *testing.T, s string) *BinopTree {
-	tree := assertParses(t, s)
-	bt, ok := tree.(*BinopTree)
-	assert.True(t, ok)
-	return bt
-}
-
-func assertEmptySequenceTree(t *testing.T, s string) *EmptySequenceTree {
-	tree := assertParses(t, s)
-	bt, ok := tree.(*EmptySequenceTree)
-	assert.True(t, ok)
-	return bt
-}
-
 func TestSimpleExpressionsParse(t *testing.T) {
 	assertLiteral(t, "1")
 	assertLiteral(t, "1.23")

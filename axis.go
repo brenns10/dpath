@@ -216,6 +216,7 @@ type Context struct {
 	ContextItem Item
 	CurrentAxis Axis
 	Namespace   map[string]Builtin
+	Axes        map[string]Axis
 }
 
 /*
@@ -233,9 +234,16 @@ func DefaultContext() *Context {
 	if err != nil {
 		panic("Lstat() failed!")
 	}
+	axes := map[string]Axis{
+		"child":              &ChildAxis{},
+		"parent":             &ParentAxis{},
+		"descendant":         &DescendantAxis{},
+		"descendant-or-self": &DescendantOrSelfAxis{},
+	}
 	return &Context{
 		ContextItem: item,
-		CurrentAxis: AXIS_CHILD,
+		CurrentAxis: axes["child"],
 		Namespace:   DefaultNamespace(),
+		Axes:        axes,
 	}
 }

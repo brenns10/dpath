@@ -93,16 +93,6 @@ func TestQname(t *testing.T) {
 	assert.Equal(t, l.Lex(&sym), eof)
 }
 
-/*
- * Assert that a string either does not lex as the token type, or it panics.
- */
-func assertDoesNotLex(t *testing.T, s string, tok int) {
-	var sym yySymType
-	defer recover()
-	l := NewLexer(strings.NewReader(s))
-	assert.NotEqual(t, l.Lex(&sym), tok)
-}
-
 func TestInvalidNames(t *testing.T) {
 	assertDoesNotLex(t, "0abc", QNAME)
 	assertDoesNotLex(t, "-abc", QNAME)

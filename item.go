@@ -47,6 +47,7 @@ type Item interface {
 	EvalTo(other Item) (Sequence, error)
 	EvalAnd(other Item) (Sequence, error)
 	EvalOr(other Item) (Sequence, error)
+	ToString() string
 }
 
 /*
@@ -237,6 +238,10 @@ func (i *IntegerItem) EvalTo(right Item) (Sequence, error) {
 	}
 }
 
+func (i *IntegerItem) ToString() string {
+	return strconv.FormatInt(i.Value, 10)
+}
+
 func newIntegerItem(v int64) *IntegerItem {
 	return &IntegerItem{Value: v}
 }
@@ -326,6 +331,10 @@ func (i *DoubleItem) EvalTo(right Item) (Sequence, error) {
 	return newDoubleRange(i.Value, getNumericAsFloat(right)), nil
 }
 
+func (i *DoubleItem) ToString() string {
+	return strconv.FormatFloat(i.Value, 'f', -1, 64)
+}
+
 func newDoubleItem(v float64) *DoubleItem {
 	return &DoubleItem{Value: v}
 }
@@ -359,6 +368,10 @@ func (i *StringItem) Compare(right Item) (int64, error) {
 	} else {
 		return int64(1), nil
 	}
+}
+
+func (i *StringItem) ToString() string {
+	return i.Value
 }
 
 func newStringItem(v string) *StringItem {
@@ -414,6 +427,10 @@ func (i *BooleanItem) EvalOr(right Item) (Sequence, error) {
 	return newSingletonSequence(newBooleanItem(i.Value || getBool(right))), nil
 }
 
+func (i *BooleanItem) ToString() string {
+	return strconv.FormatBool(i.Value)
+}
+
 /*
 File item (could be a directory too)!
 */
@@ -441,6 +458,10 @@ func (i *FileItem) Compare(right Item) (int64, error) {
 	} else {
 		return int64(1), nil
 	}
+}
+
+func (i *FileItem) ToString() string {
+	return i.Info.Name()
 }
 
 func newFileItem(absPath string) (*FileItem, error) {

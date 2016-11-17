@@ -263,7 +263,7 @@ func execBuiltin(ctx *Context, name string, args ...ParseTree) (Sequence, error)
 		return nil, errors.New("builtin function " + name + " not found.")
 	}
 
-	if len(args) != builtin.NumArgs {
+	if builtin.NumArgs >= 0 && len(args) != builtin.NumArgs {
 		return nil, errors.New(fmt.Sprintf(
 			"in call to %s, expected %d args, got %d",
 			name, builtin.NumArgs, len(args),
@@ -412,7 +412,7 @@ func fileDirFilter(ctx *Context, findFiles bool) (Sequence, error) {
 func (bt *KindTree) Evaluate(ctx *Context) (Sequence, error) {
 	switch bt.Kind {
 	case "..":
-		return AXIS_PARENT.Iterate(ctx)
+		return ctx.Axes["parent"].Iterate(ctx)
 	case "*":
 		return ctx.CurrentAxis.Iterate(ctx)
 	case "file":
@@ -465,24 +465,15 @@ func newAxisTree(a string, e ParseTree) *AxisTree {
 }
 
 func (bt *AxisTree) Evaluate(ctx *Context) (Sequence, error) {
-	oldAxis := ctx.CurrentAxis
 	var err error = nil
 	var ret Sequence = nil
-	switch bt.Axis {
-	case "child":
-		ctx.CurrentAxis = AXIS_CHILD
-	case "parent":
-		ctx.CurrentAxis = AXIS_PARENT
-	case "descendant":
-		ctx.CurrentAxis = AXIS_DESCENDANT
-	case "descendant-or-self":
-		ctx.CurrentAxis = AXIS_DESCENDANT_OR_SELF
-	default:
-		err = errors.New(fmt.Sprintf("Axis %s not implemented.", bt.Axis))
-		goto cleanup
+	newAxis, ok := ctx.Axes[bt.Axis]
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Axis %s not implemented.", bt.Axis))
 	}
+	oldAxis := ctx.CurrentAxis
+	ctx.CurrentAxis = newAxis
 	ret, err = bt.Expression.Evaluate(ctx)
-cleanup:
 	ctx.CurrentAxis = oldAxis
 	return ret, err
 }

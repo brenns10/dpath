@@ -126,3 +126,16 @@ func parseStringLiteral(str string) string {
 
 	return buffer.String()
 }
+
+/*
+Convert a sequence to a slice of Items.
+*/
+func seqToSlice(seq Sequence, ctx *Context) ([]Item, error) {
+	var err error
+	var next bool
+	items := make([]Item, 0, 5)
+	for next, err = seq.Next(ctx); next && err == nil; next, err = seq.Next(ctx) {
+		items = append(items, seq.Value())
+	}
+	return items, err
+}

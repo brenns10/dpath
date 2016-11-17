@@ -389,7 +389,7 @@ func (s *DescendantSequence) Next(ctx *Context) (bool, error) {
 			"size": len(s.ToVisit),
 			"item": ctx.ContextItem,
 		}).Debug("Starting on new source for children.")
-		s.Source, err = AXIS_CHILD.Iterate(ctx)
+		s.Source, err = ctx.Axes["child"].Iterate(ctx)
 		ctx.ContextItem = oldCtx
 
 		if err != nil {

@@ -5,42 +5,6 @@ import (
 	"testing"
 )
 
-func assertEvaluates(t *testing.T, s string) (Sequence, *Context) {
-	tree, e := ParseString(s)
-	assert.Nil(t, e)
-	ctx := DefaultContext()
-	res, e := tree.Evaluate(ctx)
-	assert.Nil(t, e)
-	return res, ctx
-}
-
-func seqToSlice(seq Sequence, ctx *Context) ([]Item, error) {
-	var err error
-	var next bool
-	items := make([]Item, 0, 5)
-	for next, err = seq.Next(ctx); next && err == nil; next, err = seq.Next(ctx) {
-		items = append(items, seq.Value())
-	}
-	return items, err
-}
-
-func assertSingleton(t *testing.T, ctx *Context, seq Sequence) Item {
-	hasNext, err := seq.Next(ctx)
-	assert.Nil(t, err)
-	assert.True(t, hasNext)
-	item := seq.Value()
-	hasNext, err = seq.Next(ctx)
-	assert.Nil(t, err)
-	assert.False(t, hasNext)
-	return item
-}
-
-func assertEmptySequence(t *testing.T, ctx *Context, seq Sequence) {
-	hasNext, err := seq.Next(ctx)
-	assert.Nil(t, err)
-	assert.False(t, hasNext)
-}
-
 func TestIntegerLiteral(t *testing.T) {
 	seq, ctx := assertEvaluates(t, "1989")
 	item := assertSingleton(t, ctx, seq)
@@ -198,7 +162,7 @@ func TestBinopIncorrectTypesFail(t *testing.T) {
 	}
 	for _, uut := range cases {
 		tree := assertParses(t, uut)
-		ctx := DefaultContext()
+		ctx := MockDefaultContext()
 		_, err := tree.Evaluate(ctx)
 		assert.Error(t, err)
 	}
@@ -243,7 +207,7 @@ func TestUnopIncorrectTypesFail(t *testing.T) {
 	}
 	for _, uut := range cases {
 		tree := assertParses(t, uut)
-		ctx := DefaultContext()
+		ctx := MockDefaultContext()
 		_, err := tree.Evaluate(ctx)
 		assert.Error(t, err)
 	}
@@ -277,7 +241,7 @@ func TestBooleanOperatorsIncorrectTypes(t *testing.T) {
 	}
 	for _, uut := range cases {
 		tree := assertParses(t, uut)
-		ctx := DefaultContext()
+		ctx := MockDefaultContext()
 		_, err := tree.Evaluate(ctx)
 		assert.Error(t, err)
 	}
