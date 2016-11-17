@@ -7,7 +7,6 @@ lifting of evaluation.
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -204,24 +203,7 @@ func newIntegerTree(num string) *LiteralTree {
 }
 
 func newStringTree(str string) *LiteralTree {
-	var buffer bytes.Buffer
-	last := false
-	sub := str[1 : len(str)-1]
-	delim := rune(str[0])
-
-	for _, char := range sub {
-		if last && char == delim {
-			buffer.WriteRune(char)
-			last = false
-		} else if !last && char == delim {
-			last = true
-		} else {
-			buffer.WriteRune(char)
-			last = false
-		}
-	}
-
-	return &LiteralTree{Type: TYPE_STRING, StringValue: buffer.String()}
+	return &LiteralTree{Type: TYPE_STRING, StringValue: parseStringLiteral(str)}
 }
 
 func newDoubleTree(num string) *LiteralTree {

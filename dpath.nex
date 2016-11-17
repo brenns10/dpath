@@ -42,6 +42,8 @@
 { /* skip WS */ }
 /\$/
 { return DOLLAR }
+/#/
+{ return POUND }
 /\(/
 { return LPAREN }
 /\)/

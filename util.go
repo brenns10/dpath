@@ -6,6 +6,7 @@ code a bit simpler.
 package main
 
 import (
+	"bytes"
 	"errors"
 )
 
@@ -100,4 +101,28 @@ func getNumericAsFloat(i Item) float64 {
 	} else {
 		return getDouble(i)
 	}
+}
+
+/*
+Return the string literal with escaped quotes replaced.
+*/
+func parseStringLiteral(str string) string {
+	var buffer bytes.Buffer
+	last := false
+	sub := str[1 : len(str)-1]
+	delim := rune(str[0])
+
+	for _, char := range sub {
+		if last && char == delim {
+			buffer.WriteRune(char)
+			last = false
+		} else if !last && char == delim {
+			last = true
+		} else {
+			buffer.WriteRune(char)
+			last = false
+		}
+	}
+
+	return buffer.String()
 }

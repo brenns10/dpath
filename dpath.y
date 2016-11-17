@@ -32,6 +32,7 @@ package main
 %token  <num>           AXIS
 
 %token  <num>           DOLLAR
+%token  <num>           POUND
 %token  <num>           LPAREN
 %token  <num>           RPAREN
 %token  <num>           LBRACKET
@@ -185,6 +186,7 @@ NodeTest:       KindTest {$$ = $1}
 
 NameTest:       QNAME {$$ = newNameTree($1)}
         |       MULTIPLY {$$ = newKindTree("*")}
+        |       POUND STRING_LITERAL {$$ = newNameTree(parseStringLiteral($2))}
                 ;
 
 KindTest:       FILE LPAREN RPAREN {$$ = newKindTree("file")}

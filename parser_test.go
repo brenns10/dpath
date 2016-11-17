@@ -139,3 +139,11 @@ func TestFilteredPath(t *testing.T) {
 	filter2 := fst.Filter[1].(*BinopTree)
 	assert.Equal(t, "<=", filter2.Operator)
 }
+
+func TestLiteralName(t *testing.T) {
+	uut := "#'My very long file name.docx'"
+	root := assertParses(t, uut)
+	assert.IsType(t, (*NameTree)(nil), root)
+	pt := root.(*NameTree)
+	assert.Equal(t, pt.Name, "My very long file name.docx")
+}
