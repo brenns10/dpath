@@ -391,12 +391,34 @@ func newKindTree(s string) *KindTree {
 	return &KindTree{Kind: s}
 }
 
+/*
+Returns a filtered sequence of just files or directories.
+Set file to true for files, or false for directories.
+*/
+func fileDirFilter(ctx *Context, findFiles bool) (Sequence, error) {
+	seq, err := ctx.CurrentAxis.Iterate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return newConditionFilter(seq, func(it Item) bool {
+		file, ok := it.(*FileItem)
+		if !ok {
+			return false
+		}
+		return findFiles != file.Info.IsDir()
+	}), nil
+}
+
 func (bt *KindTree) Evaluate(ctx *Context) (Sequence, error) {
 	switch bt.Kind {
 	case "..":
 		return AXIS_PARENT.Iterate(ctx)
 	case "*":
 		return ctx.CurrentAxis.Iterate(ctx)
+	case "file":
+		return fileDirFilter(ctx, true)
+	case "dir":
+		return fileDirFilter(ctx, false)
 	default:
 		return nil, errors.New("Not implemented.")
 	}
