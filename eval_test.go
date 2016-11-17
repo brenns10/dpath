@@ -14,6 +14,16 @@ func assertEvaluates(t *testing.T, s string) (Sequence, *Context) {
 	return res, ctx
 }
 
+func seqToSlice(seq Sequence, ctx *Context) ([]Item, error) {
+	var err error
+	var next bool
+	items := make([]Item, 0, 5)
+	for next, err = seq.Next(ctx); next && err == nil; next, err = seq.Next(ctx) {
+		items = append(items, seq.Value())
+	}
+	return items, err
+}
+
 func assertSingleton(t *testing.T, ctx *Context, seq Sequence) Item {
 	hasNext, err := seq.Next(ctx)
 	assert.Nil(t, err)
@@ -271,4 +281,18 @@ func TestBooleanOperatorsIncorrectTypes(t *testing.T) {
 		_, err := tree.Evaluate(ctx)
 		assert.Error(t, err)
 	}
+}
+
+func TestCommaOperator(t *testing.T) {
+	uut := "1 + 1, boolean(0), 'hello', 3.14159, (5, 6)"
+	seq, ctx := assertEvaluates(t, uut)
+	items, err := seqToSlice(seq, ctx)
+	assert.Nil(t, err)
+	assert.Len(t, items, 6)
+	assert.Equal(t, int64(2), getInteger(items[0]))
+	assert.Equal(t, false, getBool(items[1]))
+	assert.Equal(t, "hello", getString(items[2]))
+	assert.Equal(t, float64(3.14159), getDouble(items[3]))
+	assert.Equal(t, int64(5), getInteger(items[4]))
+	assert.Equal(t, int64(6), getInteger(items[5]))
 }

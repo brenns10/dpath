@@ -52,7 +52,7 @@ package main
 %token  <num>           DOT
 
 %type   <tree>          XPath
-%type   <tree>          Expr
+%type   <args>          Expr
 %type   <tree>          ExprSingle
 %type   <tree>          OrExpr
 %type   <tree>          AndExpr
@@ -83,11 +83,11 @@ package main
 %type   <tree>          Literal
 
 %%
-XPath:          Expr {parserResult = $1}
+XPath:          Expr {parserResult = newSequenceTree($1)}
                 ;
 
-Expr:           ExprSingle {$$ = $1}
-        |       Expr COMMA ExprSingle
+Expr:           ExprSingle {$$ = []ParseTree{$1}}
+        |       Expr COMMA ExprSingle {$$ = append($1, $3)}
                 ;
 
 ExprSingle:     OrExpr {$$ = $1}
@@ -195,7 +195,7 @@ PredicateList:  Predicate {$$ = []ParseTree{$1}}
         |       PredicateList Predicate {$$ = append($1, $2)}
                 ;
 
-Predicate:      LBRACKET Expr RBRACKET {$$ = $2}
+Predicate:      LBRACKET Expr RBRACKET {$$ = newSequenceTree($2)}
                 ;
 
 FilterExpr:     PrimaryExpr {$$ = $1}
@@ -209,7 +209,7 @@ PrimaryExpr:    Literal {$$ = $1}
                 ;
 
 ParenthesizedExpr:
-                LPAREN Expr RPAREN {$$ = $2}
+                LPAREN Expr RPAREN {$$ = newSequenceTree($2)}
         |       LPAREN RPAREN {$$ = newEmptySequenceTree()}
                 ;
 

@@ -559,3 +559,48 @@ func (pt *PathTree) Print(r io.Writer, indent int) error {
 	}
 	return nil
 }
+
+/*
+SequenceTree represents a sequence of comma separated expressions to evaluate and
+return in sequence.
+*/
+type SequenceTree struct {
+	Expressions []ParseTree
+}
+
+func newSequenceTree(p []ParseTree) ParseTree {
+	if len(p) == 1 {
+		return p[0]
+	} else {
+		return &SequenceTree{Expressions: p}
+	}
+}
+
+func (st *SequenceTree) Evaluate(ctx *Context) (Sequence, error) {
+	results := make([]Sequence, 0, len(st.Expressions))
+	for _, tree := range st.Expressions {
+		seq, err := tree.Evaluate(ctx)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, seq)
+	}
+	return newConcatenateSequence(results...), nil
+}
+
+func (st *SequenceTree) Print(w io.Writer, indent int) error {
+	var e error
+	indentStr := getIndent(indent)
+	if _, e = io.WriteString(w, indentStr+"SEQUENCE\n"); e != nil {
+		return e
+	}
+	for _, t := range st.Expressions {
+		if e = t.Print(w, indent+1); e != nil {
+			return e
+		}
+		if _, e = io.WriteString(w, indentStr+",\n"); e != nil {
+			return e
+		}
+	}
+	return nil
+}
