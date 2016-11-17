@@ -257,3 +257,18 @@ func TestBooleanOperators(t *testing.T) {
 		assert.Equal(t, getBool(item), results[i])
 	}
 }
+
+func TestBooleanOperatorsIncorrectTypes(t *testing.T) {
+	cases := []string{
+		"1 or boolean(0)",
+		"2.0 and boolean(0)",
+		"(1, 2, 3) or boolean(0)",
+		"(boolean(0), 1) and boolean(0)",
+	}
+	for _, uut := range cases {
+		tree := assertParses(t, uut)
+		ctx := DefaultContext()
+		_, err := tree.Evaluate(ctx)
+		assert.Error(t, err)
+	}
+}
