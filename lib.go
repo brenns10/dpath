@@ -8,6 +8,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math"
 )
 
@@ -25,6 +26,8 @@ var (
 		Name: "boolean", NumArgs: 1, Invoke: BuiltinBooleanInvoke}
 	BUILTIN_CONCAT = Builtin{
 		Name: "concat", NumArgs: -1, Invoke: BuiltinConcatInvoke}
+	BUILTIN_ROUND = Builtin{
+		Name: "round", NumArgs: 1, Invoke: BuiltinRoundInvoke}
 )
 
 /*
@@ -119,11 +122,34 @@ func BuiltinConcatInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 }
 
 /*
+Invoke the builtin "round" function, which takes a numeric and rounds it.
+*/
+func BuiltinRoundInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	item, err := getSingleItem(ctx, args[0])
+	if err != nil {
+		return nil, err
+	}
+	switch item.TypeName() {
+	case TYPE_INTEGER:
+		return newSingletonSequence(item), nil
+	case TYPE_DOUBLE:
+		return newSingletonSequence(newDoubleItem(math.Floor(
+			getDouble(item) + 0.5,
+		))), nil
+	default:
+		return nil, errors.New(fmt.Sprintf(
+			"Type %s not supported for round() function.", item.TypeName(),
+		))
+	}
+}
+
+/*
 Return a map of each builtin's name to its struct.
 */
 func DefaultNamespace() map[string]Builtin {
 	return map[string]Builtin{
 		"boolean": BUILTIN_BOOLEAN,
 		"concat":  BUILTIN_CONCAT,
+		"round":   BUILTIN_ROUND,
 	}
 }

@@ -178,3 +178,52 @@ func TestConcatNoArgsFails(t *testing.T) {
 	_, err = tree.Evaluate(ctx)
 	assert.Error(t, err)
 }
+
+func TestRoundDoubles(t *testing.T) {
+	cases := []string{
+		"round(2.0)",
+		"round(5.499999)",
+		"round(5.5)",
+		"round(5.9)",
+		"round(-1.5)",
+		"round(-1.50000001)",
+	}
+	results := []float64{2.0, 5.0, 6.0, 6.0, -1.0, -2.0}
+	for i, uut := range cases {
+		seq, ctx := assertEvaluates(t, uut)
+		item := assertSingleton(t, ctx, seq)
+		assert.IsType(t, (*DoubleItem)(nil), item)
+		assert.Equal(t, results[i], getDouble(item))
+	}
+}
+
+func TestRoundIntegers(t *testing.T) {
+	cases := []string{
+		"round(2)",
+		"round(0)",
+		"round(-2)",
+	}
+	results := []int64{2, 0, -2}
+	for i, uut := range cases {
+		seq, ctx := assertEvaluates(t, uut)
+		item := assertSingleton(t, ctx, seq)
+		assert.IsType(t, (*IntegerItem)(nil), item)
+		assert.Equal(t, results[i], getInteger(item))
+	}
+}
+
+func TestRoundInvalid(t *testing.T) {
+	cases := []string{
+		"round()",
+		"round(1.0, 2)",
+		"round('im doctor, not a string, jim')",
+		"round(.)",
+		"round(boolean(0))",
+	}
+	for _, uut := range cases {
+		tree := assertParses(t, uut)
+		ctx := MockDefaultContext()
+		_, err := tree.Evaluate(ctx)
+		assert.Error(t, err)
+	}
+}
