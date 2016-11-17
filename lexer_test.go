@@ -35,7 +35,7 @@ func TestString(t *testing.T) {
 
 func TestKeywords(t *testing.T) {
 	var sym yySymType
-	uut := "or and idiv div mod eq ne lt le gt ge is union file dir to"
+	uut := "or and idiv div mod eq ne lt le gt ge file dir to"
 	l := NewLexer(strings.NewReader(uut))
 	assert.Equal(t, l.Lex(&sym), OR)
 	assert.Equal(t, l.Lex(&sym), AND)
@@ -48,8 +48,6 @@ func TestKeywords(t *testing.T) {
 	assert.Equal(t, l.Lex(&sym), VLE)
 	assert.Equal(t, l.Lex(&sym), VGT)
 	assert.Equal(t, l.Lex(&sym), VGE)
-	assert.Equal(t, l.Lex(&sym), IS)
-	assert.Equal(t, l.Lex(&sym), UNION)
 	assert.Equal(t, l.Lex(&sym), FILE)
 	assert.Equal(t, l.Lex(&sym), DIR)
 	assert.Equal(t, l.Lex(&sym), TO)
@@ -58,7 +56,7 @@ func TestKeywords(t *testing.T) {
 
 func TestSymbols(t *testing.T) {
 	var sym yySymType
-	uut := ":: $ ( ) [ ] , + - * / = != < <= > >= | @ .. ."
+	uut := ":: $ ( ) [ ] , + - * / = != < <= > >= @ .. ."
 	l := NewLexer(strings.NewReader(uut))
 	assert.Equal(t, l.Lex(&sym), AXIS)
 	assert.Equal(t, l.Lex(&sym), DOLLAR)
@@ -77,7 +75,6 @@ func TestSymbols(t *testing.T) {
 	assert.Equal(t, l.Lex(&sym), GLE)
 	assert.Equal(t, l.Lex(&sym), GGT)
 	assert.Equal(t, l.Lex(&sym), GGE)
-	assert.Equal(t, l.Lex(&sym), UNIONSYM)
 	assert.Equal(t, l.Lex(&sym), ATTR)
 	assert.Equal(t, l.Lex(&sym), DOTDOT)
 	assert.Equal(t, l.Lex(&sym), DOT)

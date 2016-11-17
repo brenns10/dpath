@@ -28,10 +28,6 @@
 { return VGT }
 /ge/
 { return VGE }
-/is/
-{ return IS }
-/union/
-{ return UNION }
 /file/
 { return FILE }
 /dir/
@@ -76,8 +72,6 @@
 { return GGT }
 />=/
 { return GGE }
-/\|/
-{ return UNIONSYM }
 /@/
 { return ATTR }
 /\.\./

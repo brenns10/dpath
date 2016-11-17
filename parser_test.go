@@ -98,7 +98,6 @@ func TestComparisons(t *testing.T) {
 	assertParses(t, "1 < 1")
 	assertParses(t, "1 le 1")
 	assertParses(t, "-1 <= 1")
-	assertParses(t, "/Blah is .")
 }
 
 func TestSimplePath(t *testing.T) {

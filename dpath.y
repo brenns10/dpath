@@ -26,8 +26,6 @@ package main
 %token  <num>           VLE
 %token  <num>           VGT
 %token  <num>           VGE
-%token  <num>           IS
-%token  <num>           UNION
 %token  <num>           FILE
 %token  <num>           DIR
 %token  <num>           TO
@@ -49,7 +47,6 @@ package main
 %token  <num>           GLE
 %token  <num>           GGT
 %token  <num>           GGE
-%token  <num>           UNIONSYM
 %token  <num>           ATTR
 %token  <num>           DOTDOT
 %token  <num>           DOT
@@ -62,7 +59,6 @@ package main
 %type   <tree>          ComparisonExpr
 %type   <str>           ValueComp
 %type   <str>           GeneralComp
-%type   <str>           NodeComp
 %type   <tree>          RangeExpr
 %type   <tree>          AdditiveExpr
 %type   <tree>          MultiplicativeExpr
@@ -108,7 +104,6 @@ AndExpr:        ComparisonExpr {$$ = $1}
 ComparisonExpr: RangeExpr {$$ = $1}
         |       RangeExpr ValueComp RangeExpr {$$ = newBinopTree($2, $1, $3)}
         |       RangeExpr GeneralComp RangeExpr {$$ = newBinopTree($2, $1, $3)}
-        |       RangeExpr NodeComp RangeExpr {$$ = newBinopTree($2, $1, $3)}
                 ;
 
 ValueComp:      VEQ {$$ = "eq"}
@@ -125,9 +120,6 @@ GeneralComp:    GEQ {$$ = "="}
         |       GLE {$$ = "<="}
         |       GGT {$$ = ">"}
         |       GGE {$$ = ">="}
-                ;
-
-NodeComp:       IS {$$ = "is"}
                 ;
 
 RangeExpr:      AdditiveExpr {$$ = $1}

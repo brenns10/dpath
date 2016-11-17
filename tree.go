@@ -100,6 +100,10 @@ func (bt *BinopTree) Evaluate(ctx *Context) (Sequence, error) {
 		return leftItem.EvalModulus(rightItem)
 	case "to":
 		return leftItem.EvalTo(rightItem)
+	case "and":
+		return leftItem.EvalAnd(rightItem)
+	case "or":
+		return leftItem.EvalOr(rightItem)
 	case "eq":
 		v, err := CmpEq(leftItem, rightItem)
 		return newSingletonSequence(newBooleanItem(v)), err

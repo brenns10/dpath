@@ -238,3 +238,22 @@ func TestUnopIncorrectTypesFail(t *testing.T) {
 		assert.Error(t, err)
 	}
 }
+
+func TestBooleanOperators(t *testing.T) {
+	cases := []string{
+		"boolean(0) and boolean(0)",
+		"boolean(0) and boolean(1)",
+		"boolean(1) and boolean(0)",
+		"boolean(1) and boolean(1)",
+		"boolean(0) or boolean(0)",
+		"boolean(0) or boolean(1)",
+		"boolean(1) or boolean(0)",
+		"boolean(1) or boolean(1)",
+	}
+	results := []bool{false, false, false, true, false, true, true, true}
+	for i, uut := range cases {
+		seq, ctx := assertEvaluates(t, uut)
+		item := assertSingleton(t, ctx, seq)
+		assert.Equal(t, getBool(item), results[i])
+	}
+}

@@ -1,7 +1,7 @@
 /*
 item.go contains interfaces and structures related to Items, the atomic units of
 the DPath data model. Since much of arithmetic is type-specific, most of the
-arithmetic evaluation is implemented in this code.
+arithmetic evaluation is implemented in this file.
 */
 
 package main
@@ -45,6 +45,8 @@ type Item interface {
 	EvalIntegerDivide(other Item) (Sequence, error)
 	EvalModulus(other Item) (Sequence, error)
 	EvalTo(other Item) (Sequence, error)
+	EvalAnd(other Item) (Sequence, error)
+	EvalOr(other Item) (Sequence, error)
 }
 
 /*
@@ -52,41 +54,47 @@ Contains some base implementations of type operations.
 */
 type BaseItem struct{}
 
-func (i *BaseItem) TypeName() string { return "base" }
-
-func unsupported(operator string, left *BaseItem, right Item) (Sequence, error) {
+func unsupported(operator string, leftType string, right Item) (Sequence, error) {
 	return nil, errors.New(fmt.Sprintf(
 		"operator %s not supported on types %s, %s",
-		operator, left.TypeName(), right.TypeName(),
+		operator, leftType, right.TypeName(),
 	))
 }
 
 func (i *BaseItem) EvalPlus(other Item) (Sequence, error) {
-	return unsupported("+", i, other)
+	return unsupported("+", "", other)
 }
 
 func (i *BaseItem) EvalMinus(other Item) (Sequence, error) {
-	return unsupported("-", i, other)
+	return unsupported("-", "", other)
 }
 
 func (i *BaseItem) EvalMultiply(other Item) (Sequence, error) {
-	return unsupported("+", i, other)
+	return unsupported("+", "", other)
 }
 
 func (i *BaseItem) EvalDivide(other Item) (Sequence, error) {
-	return unsupported("div", i, other)
+	return unsupported("div", "", other)
 }
 
 func (i *BaseItem) EvalIntegerDivide(other Item) (Sequence, error) {
-	return unsupported("idiv", i, other)
+	return unsupported("idiv", "", other)
 }
 
 func (i *BaseItem) EvalModulus(other Item) (Sequence, error) {
-	return unsupported("mod", i, other)
+	return unsupported("mod", "", other)
 }
 
 func (i *BaseItem) EvalTo(other Item) (Sequence, error) {
-	return unsupported("to", i, other)
+	return unsupported("to", "", other)
+}
+
+func (i *BaseItem) EvalAnd(other Item) (Sequence, error) {
+	return unsupported("and", "", other)
+}
+
+func (i *BaseItem) EvalOr(other Item) (Sequence, error) {
+	return unsupported("or", "", other)
 }
 
 /*
@@ -127,6 +135,7 @@ func noRelCmpError(left, right Item) error {
 An Item that can contain a 64-bit signed integer.
 */
 type IntegerItem struct {
+	*BaseItem
 	Value int64
 }
 
@@ -236,6 +245,7 @@ func newIntegerItem(v int64) *IntegerItem {
 An Item that can contain a 64-bit double precision floating point number.
 */
 type DoubleItem struct {
+	*BaseItem
 	Value float64
 }
 
@@ -388,6 +398,20 @@ func (i *BooleanItem) Compare(right Item) (int64, error) {
 	} else {
 		return int64(-1), nil
 	}
+}
+
+func (i *BooleanItem) EvalAnd(right Item) (Sequence, error) {
+	if right.TypeName() != TYPE_BOOLEAN {
+		return unsupported("and", "boolean", right)
+	}
+	return newSingletonSequence(newBooleanItem(i.Value && getBool(right))), nil
+}
+
+func (i *BooleanItem) EvalOr(right Item) (Sequence, error) {
+	if right.TypeName() != TYPE_BOOLEAN {
+		return unsupported("or", "boolean", right)
+	}
+	return newSingletonSequence(newBooleanItem(i.Value || getBool(right))), nil
 }
 
 /*
