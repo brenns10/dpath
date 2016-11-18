@@ -369,3 +369,38 @@ func TestEndsWithInvalid(t *testing.T) {
 		assert.Error(t, err, uut)
 	}
 }
+
+func TestStartswith(t *testing.T) {
+	cases := []string{
+		"starts-with('abcdef', 'abc')",
+		"starts-with('fedcba', 'def')",
+		"starts-with((), ())",
+		"starts-with('', '')",
+		"starts-with('blah', '')",
+		"starts-with('blah', ())",
+		"starts-with('blah', 'blah')",
+	}
+	results := []bool{true, false, true, true, true, true, true}
+	for i, uut := range cases {
+		seq, ctx := assertEvaluates(t, uut)
+		item := assertSingleton(t, ctx, seq)
+		assert.IsType(t, (*BooleanItem)(nil), item, uut)
+		assert.Equal(t, results[i], getBool(item), uut)
+	}
+}
+
+func TestStartswithInvalid(t *testing.T) {
+	cases := []string{
+		"starts-with()",
+		"starts-with('one')",
+		"starts-with('one', 5)",
+		"starts-with(3, 'one')",
+		"starts-with('one', 'two', 'three')",
+	}
+	for _, uut := range cases {
+		tree := assertParses(t, uut)
+		ctx := MockDefaultContext()
+		_, err := tree.Evaluate(ctx)
+		assert.Error(t, err, uut)
+	}
+}
