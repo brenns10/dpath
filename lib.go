@@ -55,6 +55,12 @@ var (
 		Name: "path", NumArgs: -1, Invoke: BuiltinPathInvoke}
 	BUILTIN_COUNT = Builtin{
 		Name: "count", NumArgs: 1, Invoke: BuiltinCountInvoke}
+	BUILTIN_TRUE = Builtin{
+		Name: "true", NumArgs: 0, Invoke: BuiltinTrueInvoke}
+	BUILTIN_FALSE = Builtin{
+		Name: "false", NumArgs: 0, Invoke: BuiltinFalseInvoke}
+	BUILTIN_NOT = Builtin{
+		Name: "not", NumArgs: 1, Invoke: BuiltinNotInvoke}
 )
 
 /*
@@ -397,6 +403,23 @@ func BuiltinCountInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 	return newSingletonSequence(newIntegerItem(count)), nil
 }
 
+func BuiltinTrueInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	return newSingletonSequence(newBooleanItem(true)), nil
+}
+
+func BuiltinFalseInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	return newSingletonSequence(newBooleanItem(false)), nil
+}
+
+func BuiltinNotInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	seq, err := BuiltinBooleanInvoke(ctx, args...)
+	if err != nil {
+		return nil, err
+	}
+	boolValue := getBool(panicUnlessOne(ctx, seq))
+	return newSingletonSequence(newBooleanItem(!boolValue)), nil
+}
+
 /*
 Return a map of each builtin's name to its struct.
 */
@@ -417,5 +440,8 @@ func DefaultNamespace() map[string]Builtin {
 		"name":          BUILTIN_NAME,
 		"path":          BUILTIN_PATH,
 		"count":         BUILTIN_COUNT,
+		"true":          BUILTIN_TRUE,
+		"false":         BUILTIN_FALSE,
+		"not":           BUILTIN_NOT,
 	}
 }

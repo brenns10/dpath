@@ -577,3 +577,38 @@ func TestCountInvalid(t *testing.T) {
 		assert.Error(t, err, uut)
 	}
 }
+
+func TestTrueFalseNot(t *testing.T) {
+	cases := []string{
+		"true()",
+		"false()",
+		"not(true())",
+		"not(false())",
+		"not(0)",
+		"not(1)",
+		"not(1 = 1)",
+		"not('blah')",
+		"not(())",
+	}
+	results := []bool{true, false, false, true, true, false, false, false, true}
+	for i, uut := range cases {
+		seq, ctx := assertEvaluates(t, uut)
+		item := assertSingleton(t, ctx, seq)
+		assert.Equal(t, results[i], getBool(item), uut)
+	}
+}
+
+func TestTrueFalseNotInvalid(t *testing.T) {
+	cases := []string{
+		"true(1)", "false('abc')",
+		"true(1, 2)", "false((1, 2, 3), .)",
+		"not()",
+		"not('blah', 'blah')",
+	}
+	for _, uut := range cases {
+		tree := assertParses(t, uut)
+		ctx := MockDefaultContext()
+		_, err := tree.Evaluate(ctx)
+		assert.Error(t, err, uut)
+	}
+}
