@@ -60,6 +60,9 @@ file:/home/stephen/go/src/github.com/brenns10/dpath/dpath.y
 file:/home/stephen/go/src/github.com/brenns10/dpath/dpath
 file:/home/stephen/go/src/github.com/brenns10/dpath/dpath.nn.go
 file:/home/stephen/go/src/github.com/brenns10/dpath/.git/objects/e9/e9f542b2423e029b7adc72f71265e2eabb63a6
+
+$ dpath './/file()[@size > 4096]'
+# find files greater than 4K bytes
 ```
 
 If you're interested in how this implementation works, I maintain the
@@ -84,7 +87,7 @@ Status
 * Predicate syntax on sequences, e.g. `(1 to 5)[. mod 2 eq 0]` which evaluates
   to `(2, 4)`.
 * Path expressions on the following axes: `child`, `parent`, `descendant`,
-  `descendant-or-self`, `ancestor`, `ancestor-or-self`.
+  `descendant-or-self`, `ancestor`, `ancestor-or-self`, `attribute`.
 * The shorthand notations `*`, `..`, `//`, `#"spaces etc here"`
 * Functions: `boolean()`, `concat()`, `round()`, `substring()`, `string()`,
   `string-length()`, `ends-with()`, `starts-with()`, `contains()`, `matches()`,

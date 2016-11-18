@@ -271,6 +271,37 @@ func (a *DescendantOrSelfAxis) Iterate(ctx *Context) (Sequence, error) {
 }
 
 /*
+AttributeAxis gives file metadata. Unfortunately it's difficult to get this
+in a cross platform way. So the only current attribute I have is size.
+*/
+type AttributeAxis struct{}
+
+func (a *AttributeAxis) GetByName(ctx *Context, name string) (Sequence, error) {
+	source, ok := ctx.ContextItem.(*FileItem)
+	if !ok {
+		return nil, errors.New(
+			"Attempting to use AttributeAxis when context item is not a file.",
+		)
+	}
+	switch name {
+	case "size":
+		return newSingletonSequence(newIntegerItem(source.Info.Size())), nil
+	default:
+		return newEmptySequence(), nil
+	}
+}
+
+func (a *AttributeAxis) Iterate(ctx *Context) (Sequence, error) {
+	source, ok := ctx.ContextItem.(*FileItem)
+	if !ok {
+		return nil, errors.New(
+			"Attempting to use AttributeAxis when context item is not a file.",
+		)
+	}
+	return newSingletonSequence(newIntegerItem(source.Info.Size())), nil
+}
+
+/*
 Every DPath expression is evaluated within a context. The context contains
 information such as the current context item (usually the current directory)
 and the current axis (by default, children).
@@ -304,6 +335,7 @@ func DefaultContext() *Context {
 		"descendant-or-self": &DescendantOrSelfAxis{},
 		"ancestor":           &AncestorAxis{},
 		"ancestor-or-self":   &AncestorOrSelfAxis{},
+		"attribute":          &AttributeAxis{},
 	}
 	return &Context{
 		ContextItem: item,

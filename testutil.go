@@ -79,6 +79,7 @@ func MockDefaultContext() *Context {
 		"descendant-or-self": &MockAxis{AxisName: "descendant-or-self"},
 		"ancestor":           &MockAxis{AxisName: "ancestor"},
 		"ancestor-or-self":   &MockAxis{AxisName: "ancestor-or-self"},
+		"attribute":          &MockAxis{AxisName: "attribute"},
 	}
 	return &Context{
 		Axes:        axes,
