@@ -344,8 +344,9 @@ func TestEndsWith(t *testing.T) {
 		"ends-with('blah', '')",
 		"ends-with('blah', ())",
 		"ends-with('blah', 'blah')",
+		"ends-with(., 'Mocked')",
 	}
-	results := []bool{true, false, true, true, true, true, true}
+	results := []bool{true, false, true, true, true, true, true, false}
 	for i, uut := range cases {
 		seq, ctx := assertEvaluates(t, uut)
 		item := assertSingleton(t, ctx, seq)
@@ -379,8 +380,9 @@ func TestStartswith(t *testing.T) {
 		"starts-with('blah', '')",
 		"starts-with('blah', ())",
 		"starts-with('blah', 'blah')",
+		"starts-with(., 'Mocked')",
 	}
-	results := []bool{true, false, true, true, true, true, true}
+	results := []bool{true, false, true, true, true, true, true, true}
 	for i, uut := range cases {
 		seq, ctx := assertEvaluates(t, uut)
 		item := assertSingleton(t, ctx, seq)
