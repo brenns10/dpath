@@ -1,2 +1,10 @@
 dpath
 y.output
+
+# For the report
+report/auto
+report/*.aux
+report/*.log
+report/*.out
+report/*.pdf
+report/*.synctex.gz
