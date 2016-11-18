@@ -283,3 +283,23 @@ func TestSubstringInvalid(t *testing.T) {
 		assert.Error(t, err)
 	}
 }
+
+func TestStringBuiltin(t *testing.T) {
+	cases := []string{
+		"string(1)",
+		"string(1.1)",
+		"string(boolean(0))",
+		"string('hi there')",
+		"string()",
+	}
+	ctx := MockDefaultContext()
+	results := []string{
+		"1", "1.1", "false", "hi there", ctx.ContextItem.ToString(),
+	}
+	for i, uut := range cases {
+		seq, ctx := assertEvaluates(t, uut)
+		item := assertSingleton(t, ctx, seq)
+		assert.IsType(t, (*StringItem)(nil), item)
+		assert.Equal(t, results[i], getString(item))
+	}
+}

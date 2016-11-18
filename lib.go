@@ -30,6 +30,8 @@ var (
 		Name: "round", NumArgs: 1, Invoke: BuiltinRoundInvoke}
 	BUILTIN_SUBSTRING = Builtin{
 		Name: "substring", NumArgs: -1, Invoke: BuiltinSubstringInvoke}
+	BUILTIN_STRING = Builtin{
+		Name: "string", NumArgs: -1, Invoke: BuiltinStringInvoke}
 )
 
 /*
@@ -214,6 +216,25 @@ func BuiltinSubstringInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 	return newSingletonSequence(newStringItem(str[start:end])), nil
 }
 
+func BuiltinStringInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	var item Item
+	var err error
+	if len(args) == 0 {
+		item = ctx.ContextItem
+	} else if len(args) == 1 {
+		item, err = getZeroOrOne(ctx, args[0])
+		if err != nil {
+			return nil, err
+		} else if item == nil {
+			return newSingletonSequence(newStringItem("")), nil
+		}
+	} else {
+		return nil, errors.New("string() takes zero or one argument")
+	}
+
+	return newSingletonSequence(newStringItem(item.ToString())), nil
+}
+
 /*
 Return a map of each builtin's name to its struct.
 */
@@ -223,5 +244,6 @@ func DefaultNamespace() map[string]Builtin {
 		"concat":    BUILTIN_CONCAT,
 		"round":     BUILTIN_ROUND,
 		"substring": BUILTIN_SUBSTRING,
+		"string":    BUILTIN_STRING,
 	}
 }
