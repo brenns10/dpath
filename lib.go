@@ -32,6 +32,8 @@ var (
 		Name: "substring", NumArgs: -1, Invoke: BuiltinSubstringInvoke}
 	BUILTIN_STRING = Builtin{
 		Name: "string", NumArgs: -1, Invoke: BuiltinStringInvoke}
+	BUILTIN_STRING_LENGTH = Builtin{
+		Name: "string-length", NumArgs: -1, Invoke: BuiltinStringLengthInvoke}
 )
 
 /*
@@ -235,15 +237,36 @@ func BuiltinStringInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 	return newSingletonSequence(newStringItem(item.ToString())), nil
 }
 
+func BuiltinStringLengthInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	var str string
+	if len(args) == 0 {
+		str = ctx.ContextItem.ToString()
+	} else if len(args) == 1 {
+		item, err := getZeroOrOne(ctx, args[0])
+		if err != nil {
+			return nil, err
+		} else if item == nil {
+			str = ""
+		} else {
+			str = item.ToString()
+		}
+	} else {
+		return nil, errors.New("string-length() takes zero or one argument")
+	}
+
+	return newSingletonSequence(newIntegerItem(int64(len(str)))), nil
+}
+
 /*
 Return a map of each builtin's name to its struct.
 */
 func DefaultNamespace() map[string]Builtin {
 	return map[string]Builtin{
-		"boolean":   BUILTIN_BOOLEAN,
-		"concat":    BUILTIN_CONCAT,
-		"round":     BUILTIN_ROUND,
-		"substring": BUILTIN_SUBSTRING,
-		"string":    BUILTIN_STRING,
+		"boolean":       BUILTIN_BOOLEAN,
+		"concat":        BUILTIN_CONCAT,
+		"round":         BUILTIN_ROUND,
+		"substring":     BUILTIN_SUBSTRING,
+		"string":        BUILTIN_STRING,
+		"string-length": BUILTIN_STRING_LENGTH,
 	}
 }

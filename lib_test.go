@@ -303,3 +303,23 @@ func TestStringBuiltin(t *testing.T) {
 		assert.Equal(t, results[i], getString(item))
 	}
 }
+
+func TestStringLengthBuiltin(t *testing.T) {
+	cases := []string{
+		"string-length(1)",
+		"string-length(1.1)",
+		"string-length(boolean(0))",
+		"string-length('hi there')",
+		"string-length()",
+	}
+	ctx := MockDefaultContext()
+	results := []int64{
+		1, 3, 5, 8, int64(len(ctx.ContextItem.ToString())),
+	}
+	for i, uut := range cases {
+		seq, ctx := assertEvaluates(t, uut)
+		item := assertSingleton(t, ctx, seq)
+		assert.IsType(t, (*IntegerItem)(nil), item)
+		assert.Equal(t, results[i], getInteger(item))
+	}
+}
