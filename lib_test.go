@@ -227,3 +227,59 @@ func TestRoundInvalid(t *testing.T) {
 		assert.Error(t, err)
 	}
 }
+
+func TestSubstring(t *testing.T) {
+	// cases shamelessly stolen from XPath function spec:
+	// https://www.w3.org/TR/xpath-functions/#func-substring
+	cases := []string{
+		"substring('motor car', 6)",
+		"substring('metadata', 4, 3)",
+		"substring('overrun', 8, 1)",
+		"substring('12345', 1.5, 2.6)",
+		"substring('12345', 0, 3)",
+		"substring('12345', 5, -3)",
+		"substring('12345', -3, 5)",
+		"substring((), 1, 3)",
+	}
+	results := []string{
+		" car",
+		"ada",
+		"",
+		"234",
+		"12",
+		"",
+		"1",
+		"",
+	}
+	for i, uut := range cases {
+		seq, ctx := assertEvaluates(t, uut)
+		item := assertSingleton(t, ctx, seq)
+		assert.IsType(t, (*StringItem)(nil), item)
+		assert.Equal(t, results[i], getString(item))
+	}
+}
+
+func TestSubstringInvalid(t *testing.T) {
+	cases := []string{
+		"substring()",
+		"substring('am string with no numbers')",
+		"substring(('string followed by numbers', 1, 2.3), 1)",
+		"substring(1, 1)",
+		"substring(boolean(1), 1)",
+		"substring(1.0, 1)",
+		"substring(., 1)",
+		"substring('so many args', 1, 7, 9000)",
+		"substring('you''re not numeric...', 'no i''m not')",
+		"substring('neither is that guy', 1, 'nope')",
+		"substring('sequences?', (), 1)",
+		"substring('sequences?', (1, 2), 1)",
+		"substring('sequences?', 1, ())",
+		"substring('sequences?', 1, (1, 2))",
+	}
+	for _, uut := range cases {
+		tree := assertParses(t, uut)
+		ctx := MockDefaultContext()
+		_, err := tree.Evaluate(ctx)
+		assert.Error(t, err)
+	}
+}

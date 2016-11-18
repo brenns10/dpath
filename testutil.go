@@ -18,7 +18,7 @@ MockAxis implements the Axis interface, but it will do no file I/O and it will
 record calls, so that we can run tests on Axis operations.
 */
 type MockAxis struct {
-	*mock.Mock
+	mock.Mock
 	AxisName string
 }
 
@@ -37,7 +37,6 @@ MockFileInfo mocks the os.FileInfo struct so that we can safely test things
 related to files.
 */
 type MockFileInfo struct {
-	*mock.Mock
 	name    string
 	size    int64
 	mode    os.FileMode
@@ -46,11 +45,11 @@ type MockFileInfo struct {
 }
 
 func (f *MockFileInfo) Name() string       { return f.name }
-func (f *MockFileInfo) Size() int64        { f.Called(); return f.size }
-func (f *MockFileInfo) Mode() os.FileMode  { f.Called(); return f.mode }
-func (f *MockFileInfo) ModTime() time.Time { f.Called(); return f.modTime }
-func (f *MockFileInfo) IsDir() bool        { f.Called(); return f.isDir }
-func (f *MockFileInfo) Sys() interface{}   { f.Called(); return nil }
+func (f *MockFileInfo) Size() int64        { return f.size }
+func (f *MockFileInfo) Mode() os.FileMode  { return f.mode }
+func (f *MockFileInfo) ModTime() time.Time { return f.modTime }
+func (f *MockFileInfo) IsDir() bool        { return f.isDir }
+func (f *MockFileInfo) Sys() interface{}   { return nil }
 
 /*
 Return a mocked file.

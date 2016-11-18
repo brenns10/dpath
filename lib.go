@@ -28,6 +28,8 @@ var (
 		Name: "concat", NumArgs: -1, Invoke: BuiltinConcatInvoke}
 	BUILTIN_ROUND = Builtin{
 		Name: "round", NumArgs: 1, Invoke: BuiltinRoundInvoke}
+	BUILTIN_SUBSTRING = Builtin{
+		Name: "substring", NumArgs: -1, Invoke: BuiltinSubstringInvoke}
 )
 
 /*
@@ -144,12 +146,88 @@ func BuiltinRoundInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 }
 
 /*
+Invoke the builtin "substring" function, which takes a string, a start index,
+and an optional length, and returns the substring starting at the start index
+with the given length.
+
+This is based on the specification:
+https://www.w3.org/TR/xpath-functions/#func-substring
+
+XPath string and item indices are 1 based, not 0 based (yuck). Also, the spec's
+interpretation of the semantics of the substring operation makes for the
+absolute STUPIDEST substring function in the world. But such is life, I'm a spec
+implementer, not writer ¯\_(ツ)_/¯
+*/
+func BuiltinSubstringInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	if len(args) < 2 || len(args) > 3 {
+		return nil, errors.New("substring requires 2 or 3 arguments")
+	}
+	// Get and check first argument. The spec has some pretty stupid semantics.
+	hasNext, err := args[0].Next(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var str string
+	if hasNext {
+		item1 := args[0].Value()
+		hasNext, err := args[0].Next(ctx)
+		if hasNext || err != nil {
+			return nil, errors.New("first arg to substring must be singleton or empty sequence")
+		}
+		if item1.TypeName() != TYPE_STRING {
+			return nil, errors.New("first arg to substring must be a string")
+		}
+		str = getString(item1)
+
+	} else {
+		str = ""
+	}
+	// Get and check second argument
+	item2, err := getSingleItem(ctx, args[1])
+	if err != nil {
+		return nil, err
+	}
+	if item2.TypeName() != TYPE_INTEGER && item2.TypeName() != TYPE_DOUBLE {
+		return nil, errors.New("second arg to substring must be numeric")
+	}
+	var start, end, strlen int64
+	strlen = int64(len(str))
+	start = getNumericAsInteger(item2) - 1 // (positions are 1 based)
+	end = strlen
+	// Get and apply the optional third argument.
+	if len(args) == 3 {
+		item3, err := getSingleItem(ctx, args[2])
+		if err != nil {
+			return nil, err
+		}
+		if item3.TypeName() != TYPE_INTEGER && item3.TypeName() != TYPE_DOUBLE {
+			return nil, errors.New("third arg to substring must be numeric")
+		}
+		end = start + getNumericAsInteger(item3)
+	}
+	// Normalize start.
+	if start < 0 {
+		start = 0
+	} else if start > strlen {
+		start = int64(len(str))
+	}
+	// Normalize end
+	if end < start {
+		end = start
+	} else if end > strlen {
+		end = strlen
+	}
+	return newSingletonSequence(newStringItem(str[start:end])), nil
+}
+
+/*
 Return a map of each builtin's name to its struct.
 */
 func DefaultNamespace() map[string]Builtin {
 	return map[string]Builtin{
-		"boolean": BUILTIN_BOOLEAN,
-		"concat":  BUILTIN_CONCAT,
-		"round":   BUILTIN_ROUND,
+		"boolean":   BUILTIN_BOOLEAN,
+		"concat":    BUILTIN_CONCAT,
+		"round":     BUILTIN_ROUND,
+		"substring": BUILTIN_SUBSTRING,
 	}
 }

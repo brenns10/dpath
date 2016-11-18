@@ -8,6 +8,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"math"
 )
 
 /*
@@ -100,6 +101,17 @@ func getNumericAsFloat(i Item) float64 {
 		return float64(getInteger(i))
 	} else {
 		return getDouble(i)
+	}
+}
+
+/*
+Return numeric value as rounded integer.
+*/
+func getNumericAsInteger(i Item) int64 {
+	if i.TypeName() == TYPE_INTEGER {
+		return getInteger(i)
+	} else {
+		return int64(math.Floor(getDouble(i) + 0.5))
 	}
 }
 
