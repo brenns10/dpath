@@ -442,3 +442,37 @@ func TestContainsInvalid(t *testing.T) {
 		assert.Error(t, err, uut)
 	}
 }
+
+func TestMatches(t *testing.T) {
+	cases := []string{
+		"matches('abcdef', 'bcd')",
+		"matches('fedcba', 'f[b-e]+a')",
+		"matches('nope', ())",
+		"matches('blah', 'blah')",
+		"matches(., '.*Dir')",
+		"matches('MockedDir', .)",
+	}
+	results := []bool{false, true, false, true, true, true}
+	for i, uut := range cases {
+		seq, ctx := assertEvaluates(t, uut)
+		item := assertSingleton(t, ctx, seq)
+		assert.IsType(t, (*BooleanItem)(nil), item, uut)
+		assert.Equal(t, results[i], getBool(item), uut)
+	}
+}
+
+func TestMatchesInvalid(t *testing.T) {
+	cases := []string{
+		"matches()",
+		"matches('one')",
+		"matches('one', 5)",
+		"matches(3, 'one')",
+		"matches('one', 'two', 'three')",
+	}
+	for _, uut := range cases {
+		tree := assertParses(t, uut)
+		ctx := MockDefaultContext()
+		_, err := tree.Evaluate(ctx)
+		assert.Error(t, err, uut)
+	}
+}
