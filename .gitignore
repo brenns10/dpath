@@ -4,6 +4,8 @@ y.output
 # For the report
 report/auto
 report/*.aux
+report/*.bbl
+report/*.blg
 report/*.log
 report/*.out
 report/*.pdf

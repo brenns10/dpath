@@ -1,8 +1,8 @@
 \documentclass{scrartcl}
 
 \title{An XPath Query Evaluator for Filesystems}
-\subtitle{EECS 433 Project Progress Report}
-\date{November 13, 2016}
+\subtitle{EECS 433 Final Project}
+\date{December 8, 2016}
 \author{Stephen Brennan}
 
 \usepackage[utf8]{inputenc}
@@ -29,221 +29,116 @@
 \begin{document}
 \maketitle
 
+\abstract
+
+XPath is a query language designed for addressing the nodes of an XML file.
+However, its power in addressing and querying tree-structured data makes it
+applicable to other types of data. In this project, we describe our
+implementation of one such application: DPath. DPath is a tool that allows users
+to search for files with XPath expressions.
+
 \section{Introduction}
-As discussed in class, the XPath language provides the ability to query an XML
-document based on its ``tree structure''. For instance, consider the sample
-document below:
+
+eXtensible Markup Language (XML) is a standardized data format for sharing and
+storing structured data. It bears a close resemblance to Hypertext Markup
+Language (HTML), the fundamental markup underlying the web. This is because both
+languages are based on Structured Generalized Markup Language, a
+``meta-language'' for defining documents that contain ``markup'' \cite{sgml}.
+``Markup'' can be thought of as a way to annotate data, creating structure. HTML
+uses markup to describe how content should be formated. XML uses markup to
+define logical structure of data. The fundamental unit of structure in XML is a
+tag:
 
 \begin{lstlisting}[language=XML]
-<Report>
-  <Transcript>
-    <Student Id="1234" Name="Stephen"></Student>
-    <CrsTaken CrsId="EECS433" Semester="F2016"></CrsTaken>
-    <CrsTaken CrsId="MATH303" Semester="F2016"></CrsTaken>
-  </Transcript>
-  <Transcript>
-    ...
-  </Transcript>
-  ...
-</Report>
+  <Student></Student>
 \end{lstlisting}
 
-The query \texttt{//Transcript[./Student/@Name = "Stephen"]/CrsTaken/@CrsId}
-would return the IDs of courses that the student named Stephen had taken. This
-query is based on a sequence of paths with conditions attached to them. In this
-case, the results would be \texttt{EECS433} and \texttt{MATH303}.
+Tags may have textual attributes associated with them:
 
-XML documents share several similarities with filesystem hierarchies. Both are
-organized in a tree-like structure, both have attributes attached to each node,
-and both have different types of nodes. Filesystems can be queried in several
-ways, such as a recursive \texttt{grep}, the \texttt{find} utility, the
-\texttt{glob} C library function, and several other vendor-specific search
-tools. None of these provide a simple way to search a filesystem based on its
-structure. XPath is a query language well-suited to querying a tree structure,
-and could thus be applied to filesystem queries.
+\begin{lstlisting}[language=XML]
+  <Student id="1234" name="Stephen Brennan"></Student>
+\end{lstlisting}
 
-\section{Problem Definition}
+Tags can contain textual data as well as other tags:
 
-In this project, I will implement a tool which is capable of evaluating XPath
-expressions on the filesystem. For instance, consider the filesystem hierarchy
-represented below:
+\begin{lstlisting}[language=XML]
+  <Student id="1234" name="Stephen Brennan">
+    <Course id="EECS 433">Database Systems</Course>
+    <Course id="MATH 303">Number Theory</Course>
+    <Course id="EECS 651">Master&apos;s Thesis</Course>
+  </Student>
+\end{lstlisting}
+
+XML tags, attributes, and data form a tree structure. XPath is a query language
+that can be used to query and address each part of tree structures \cite{xpath}.
+It achieves this using \emph{path expressions}. For example, the path expression
+\texttt{//Student/Course} describes all \texttt{Course} nodes whose parent is a
+\texttt{Student} node. XPath allows for even more fine-grained queries through
+the use of predicates, as well as several different \emph{axes}. All of these
+concepts will be discussed at length in Section~\ref{sec:xpath}.
+
+Since XPath is a language for querying the XML tree structure, it could also be
+applicable to other tree structures. One common tree structure encountered in
+everyday computing is the file system. Most modern file systems are organized
+into a tree where internal nodes are directories and leaf nodes are files (or
+empty directories). Like XML, each file and directory has a name and attributes.
+However, there are some important differences between file systems that should
+be recognized.
+
+\begin{itemize}
+\item Unlike XML, a fully qualified path file path uniquely identifies a file,
+  whereas a fully qualified tag path in XML may identify a whole set of nodes.
+  This is because there may be several sibling tags with the same name in XML.
+\item File systems may contain \emph{links} which point to other parts of the
+  system, or even to a parent, creating cycles. For the purpose of this paper,
+  we will ignore these links.
+\end{itemize}
+
+For this project, we have implemented a tool which evaluates queries in a
+language nearly identical to XPath, called DPath. This tool runs from the
+command line, accepts a query as its sole argument, and outputs one result per
+line on standard output. An example query is presented below.
 
 \begin{lstlisting}
-/home/stephen/repos
-|- project1
-|  |- code.c
-|- project2
-|  |- code.py
+stephen at greed in ~/go/src/github.com/brenns10/dpath
+$ dpath './.[starts-with(name(), ../name())]'
+file:/home/stephen/go/src/github.com/brenns10/dpath/dpath.nn.go
+file:/home/stephen/go/src/github.com/brenns10/dpath/dpath.y
+file:/home/stephen/go/src/github.com/brenns10/dpath/dpath
+file:/home/stephen/go/src/github.com/brenns10/dpath/dpath.nex
 \end{lstlisting}
 
-A query such as \texttt{//*[./code.c]} would return a list of directories that
-contain a file named \texttt{code.c}. In this case, one directory is returned:
-\texttt{/home/stephen/repos/project1}. The tool will run on the command line,
-taking an XPath query as an argument, and producing query results on the
-standard output stream.
+This query returns files from the DPath source directory which start with the
+same name as their containing directory.
 
-Since this is an ambitious task, the following limitations are expected:
+The remainder of this report will be organized as follows.
+Section~\ref{sec:xpath} will give a detailed description of the XPath query
+language's syntax and semantics. Section~\ref{sec:dpath} will describe the
+implementation of DPath. Section~\ref{sec:future} will discuss future work for
+this project, and Section~\ref{sec:related} will discuss related work.
 
-\begin{itemize}
-\item The query language implemented will be a subset of XPath.
-\item Some inconsistencies may be introduced to account for legal filenames
-  which are not legal XPath syntax.
-\item Some inconsistencies may be introduced to allow for a more practically
-  useful system (e.g. simple regular expression syntax, etc).
-\end{itemize}
+\section{XPath}
+\label{sec:xpath}
 
-This project will be implemented in the Go programming language.
+The XPath language is standardized by the World Wide Web Consortium (W3C), and
+it is used within the XQuery and XSLT languages, which are also W3C standards
+\cite{xpath}. In the research and development of DPath, we focused on the 2.0
+version of the XPath standard.
 
-\section{Literature Survey}
+There are several parts to the XPath standard: syntax\cite{xpath},
+semantics\cite{xpath-semantics}, data model\cite{xpath-datamodel}, type system,
+operators, and built-in function library\cite{xpath-functions}.
 
-XPath is a language for addressing nodes of an XML document \cite{xpath}.
-Although it is intended to be embedded in languages such as XQuery and XSLT, it
-has also found use within web browsers and scrapers as a standalone query
-language, similar to regular expressions. It excels at this task because its
-syntax is designed to represent the nested, tree-like structure of XML documents
-(a task which is impossible for regular expressions). Since file systems share
-this structure, XPath is equally suited to querying file systems.
+\section{DPath Implementation}
+\label{sec:dpath}
 
-The syntax of XPath can be described as a context-free grammar, with an alphabet
-of tokens that include identifiers, literals, keywords, and symbols
-\cite{xpath}. At its core, the XPath language is a simple ``expression
-language'' grammar. However, the principle feature of the language, path
-expressions, are added as operators with higher precedence than multiplication
-and division. An exact grammar for XPath (embedded within XQuery) may be found
-in \cite{xpath}.
+\section{Future Work}
+\label{sec:future}
 
-In the XPath language, every expression returns an ordered sequence of
-heterogeneous items \cite{xpath-datamodel}. Sequences are flat, meaning that
-they cannot contain other sequences. Sequences with length one are commonly
-referred to as singletons, and treated as single items. Items may have one of
-several types, such as strings, integers, decimals, floating point numbers,
-dates, times, etc, as well as nodes from an XML document.
+\section{Related Work}
+\label{sec:related}
 
-Path expressions are evaluated with respect to a particular ``context item.''
-The context item updates as each step of a path expression is evaluated
-\cite{xpath}. For example, in the expression \texttt{E1/E2}, the matched node in
-the \texttt{E1} step becomes the context item during the \texttt{E2} step.
 
-Path expressions are also evaluated with respect to a particular ``axis.'' The
-axis can be thought of as a ``direction'' or a ``type'' of node to yield in a
-step. XPath has several axes, a few of these being:
-
-\begin{itemize}
-\item The child axis yields child nodes of the context item in the next step.
-\item The descendant axis can be thought of as the transitive closure of the
-  child axis, yielding all descendant nodes of the current node.
-\item The parent axis yields the parent node of the context item.
-\end{itemize}
-
-At this point, a relatively simple naive implementation for the evaluation of
-path expressions is apparent. At each step along a path, nodes are taken from
-the current axis applied to the current context item. Each of these nodes is
-passed to the subsequent step of the expression, updating the context item
-accordingly.
-
-Unfortunately, this algorithm runs in exponential time \cite{efficient}. A query
-such as \texttt{*/../*/..} is a trivial example of a path expression that would
-be very inefficient in the above approach, while in reality it should be very
-simple to execute. Although this trivial example could be addressed with query
-optimization before execution, other inefficiencies are not as simple. In XML
-querying, improvements on this exponential runtime can be made by taking a
-bottom-up, table-driven approach \cite{efficient}.
-
-However, these approaches cannot be applied to filesystem queries. The expensive
-operation in a filesystem is reading its contents, and descending each node in
-the hierarchy incurs a read. Gaining a bottom-up perspective of the entire
-filesystem requires reading each node in the filesystem tree, and thus it
-frequently much less expensive to take the naive approach to evaluating path
-expressions, with maybe a few optimizations (such as caching file
-meta-information in RAM).
-
-\section{Progress and Timeline}
-
-Initially, the steps of the project were broken down as follows.
-
-\begin{enumerate}
-\item Literature review: read specification of XPath as well as algorithms for
-  evaluating XPath queries.
-\item Define language scope: based on this literature review, decide on a
-  well-defined subset of the XPath language to implement. The main factors
-  influencing the scope will be the complexity of the implementation, as well as
-  the efficiency of the implementation (some subsets of XPath can be evaluated
-  much quicker than others). This should be completed by the progress report
-  deadline.
-\item Implement query parser.
-\item Implement base query engine.
-\item As time allows, implement extensions such as functions, etc.
-\item Implement command line interface to the tool.
-\end{enumerate}
-
-\subsection{Completed Work}
-
-Thus far, I have completed the literature review, language scoping, and query
-parser, as well as part of the framework of the query engine, some functions,
-and a fully-functioning command line interface. Some of the literature reviewed
-is presented in the corresponding section above.
-
-The language scoping process resulted in a restricted version of the grammar,
-data model, and semantics presented in \cite{xpath}, \cite{xpath-datamodel}, and
-\cite{xpath-semantics}. Among the important features removed from my version of
-the language are:
-
-\begin{itemize}
-\item The numeric types are simplified to two types: 64-bit signed integer and
-  64-bit double-precision signed floating point number.
-\item The language and type system's heavy reliance on the XML Schema system is
-  largely ignored, since this query language is intended for filesystems.
-\item XQuery related features such as for, where, and quantifiers are eliminated
-  from the grammar.
-\end{itemize}
-
-This down-scoping has significantly lowered the amount of code required to
-implement the query engine.
-
-The query parser is fully implemented. It consists of a lexer generated by a
-tool called Nex \cite{nex}, a Go implementation of the much older tool Lex
-\cite{lex}. Similarly, the parser is generated by Go's Yacc tool, a
-re-implementation of the original Yacc \cite{yacc}.
-
-The query evaluator contains several pieces. Currently, all arithmetic
-expressions are implemented, as well as some operations on sequences. I have yet
-to implement the steps along path expressions, but I intend to use the naive
-method described above. Most of the machinery for lazy evaluation of these
-queries is already in place.
-
-I have implemented only one function from the list described in the exhaustive
-specification \cite{xpath-functions}. This is the \texttt{boolean()} function, a
-requirement for implementing predicates in path expressions properly.
-
-The command-line interface is complete, and so all of the completed work can be
-tested. Some sample output is presented below, demonstrating the expression
-language that XPath is embedded within:
-
-\begin{lstlisting}
-$ ./dpath '1 * (3 + 5)'
-PARSE TREE:
-  1
-*
-    3
-  +
-    5
-OUTPUT:
-integer:8
-\end{lstlisting}
-
-Full source code containing up-to-date progress is available at the project
-page: \url{https://github.com/brenns10/dpath}.
-
-\subsection{Remaining Work}
-Important features yet to be developed:
-\begin{itemize}
-\item Path expressions along child, descendant, parent axes.
-\item Filtering sequences by predicate.
-\item Special axes and functions for filesystem-specific queries, such as file
-  attributes, file contents, permissions, owners, etc.
-\end{itemize}
-
-% Create bibliography from main.bib. I'm used to IEEE style but others will do.
 \bibliographystyle{ieeetr}
 \bibliography{report}
 \end{document}
