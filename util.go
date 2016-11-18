@@ -52,6 +52,31 @@ func getZeroOrOne(ctx *Context, s Sequence) (Item, error) {
 }
 
 /*
+Return a string out of a sequence.
+If the sequence is the empty sequence, return ""
+If the sequence is a singleton, coerce it to string.
+Otherwise, error.
+*/
+func specGetString(ctx *Context, s Sequence) (string, error) {
+	r, e := s.Next(ctx)
+	if e != nil {
+		return "", e
+	} else if !r {
+		return "", nil
+	}
+	item := s.Value()
+	r, e = s.Next(ctx)
+	if e != nil {
+		return "", e
+	} else if r {
+		return "", errors.New(
+			"Too many values provided, expected empty sequence or singleton.",
+		)
+	}
+	return item.ToString(), nil
+}
+
+/*
 A utility function that "asserts" at least one item is in a sequence, panicking
 if that's not the case.
 */

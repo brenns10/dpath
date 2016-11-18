@@ -219,36 +219,31 @@ func BuiltinSubstringInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 }
 
 func BuiltinStringInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
-	var item Item
+	var str string
 	var err error
 	if len(args) == 0 {
-		item = ctx.ContextItem
+		str = ctx.ContextItem.ToString()
 	} else if len(args) == 1 {
-		item, err = getZeroOrOne(ctx, args[0])
+		str, err = specGetString(ctx, args[0])
 		if err != nil {
 			return nil, err
-		} else if item == nil {
-			return newSingletonSequence(newStringItem("")), nil
 		}
 	} else {
 		return nil, errors.New("string() takes zero or one argument")
 	}
 
-	return newSingletonSequence(newStringItem(item.ToString())), nil
+	return newSingletonSequence(newStringItem(str)), nil
 }
 
 func BuiltinStringLengthInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 	var str string
+	var err error
 	if len(args) == 0 {
 		str = ctx.ContextItem.ToString()
 	} else if len(args) == 1 {
-		item, err := getZeroOrOne(ctx, args[0])
+		str, err = specGetString(ctx, args[0])
 		if err != nil {
 			return nil, err
-		} else if item == nil {
-			str = ""
-		} else {
-			str = item.ToString()
 		}
 	} else {
 		return nil, errors.New("string-length() takes zero or one argument")

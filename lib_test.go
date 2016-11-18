@@ -164,9 +164,9 @@ func TestConcat(t *testing.T) {
 	for i, uut := range cases {
 		seq := assertEvaluatesCtx(t, uut, ctx)
 		item := assertSingleton(t, ctx, seq)
-		assert.IsType(t, (*StringItem)(nil), item)
+		assert.IsType(t, (*StringItem)(nil), item, uut)
 		strItem := item.(*StringItem)
-		assert.Equal(t, results[i], strItem.Value)
+		assert.Equal(t, results[i], strItem.Value, uut)
 	}
 }
 
@@ -224,7 +224,7 @@ func TestRoundInvalid(t *testing.T) {
 		tree := assertParses(t, uut)
 		ctx := MockDefaultContext()
 		_, err := tree.Evaluate(ctx)
-		assert.Error(t, err)
+		assert.Error(t, err, uut)
 	}
 }
 
@@ -254,8 +254,8 @@ func TestSubstring(t *testing.T) {
 	for i, uut := range cases {
 		seq, ctx := assertEvaluates(t, uut)
 		item := assertSingleton(t, ctx, seq)
-		assert.IsType(t, (*StringItem)(nil), item)
-		assert.Equal(t, results[i], getString(item))
+		assert.IsType(t, (*StringItem)(nil), item, uut)
+		assert.Equal(t, results[i], getString(item), uut)
 	}
 }
 
@@ -280,7 +280,7 @@ func TestSubstringInvalid(t *testing.T) {
 		tree := assertParses(t, uut)
 		ctx := MockDefaultContext()
 		_, err := tree.Evaluate(ctx)
-		assert.Error(t, err)
+		assert.Error(t, err, uut)
 	}
 }
 
@@ -299,8 +299,8 @@ func TestStringBuiltin(t *testing.T) {
 	for i, uut := range cases {
 		seq, ctx := assertEvaluates(t, uut)
 		item := assertSingleton(t, ctx, seq)
-		assert.IsType(t, (*StringItem)(nil), item)
-		assert.Equal(t, results[i], getString(item))
+		assert.IsType(t, (*StringItem)(nil), item, uut)
+		assert.Equal(t, results[i], getString(item), uut)
 	}
 }
 
@@ -319,7 +319,7 @@ func TestStringLengthBuiltin(t *testing.T) {
 	for i, uut := range cases {
 		seq, ctx := assertEvaluates(t, uut)
 		item := assertSingleton(t, ctx, seq)
-		assert.IsType(t, (*IntegerItem)(nil), item)
-		assert.Equal(t, results[i], getInteger(item))
+		assert.IsType(t, (*IntegerItem)(nil), item, uut)
+		assert.Equal(t, results[i], getInteger(item), uut)
 	}
 }
