@@ -240,6 +240,7 @@ func TestSubstring(t *testing.T) {
 		"substring('12345', 5, -3)",
 		"substring('12345', -3, 5)",
 		"substring((), 1, 3)",
+		"substring(., 1)",
 	}
 	results := []string{
 		" car",
@@ -250,6 +251,7 @@ func TestSubstring(t *testing.T) {
 		"",
 		"1",
 		"",
+		"MockedDir",
 	}
 	for i, uut := range cases {
 		seq, ctx := assertEvaluates(t, uut)
@@ -267,7 +269,6 @@ func TestSubstringInvalid(t *testing.T) {
 		"substring(1, 1)",
 		"substring(boolean(1), 1)",
 		"substring(1.0, 1)",
-		"substring(., 1)",
 		"substring('so many args', 1, 7, 9000)",
 		"substring('you''re not numeric...', 'no i''m not')",
 		"substring('neither is that guy', 1, 'nope')",

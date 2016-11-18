@@ -33,29 +33,6 @@ func getSingleItem(ctx *Context, s Sequence) (Item, error) {
 }
 
 /*
-Return zero or one Items out of a sequence. If zero, the returned Item is nil.
-If there are more than one item in the sequence, raises an error.
-*/
-func getZeroOrOne(ctx *Context, s Sequence) (Item, error) {
-	r, e := s.Next(ctx)
-	if e != nil {
-		return nil, e
-	} else if !r {
-		return nil, nil
-	}
-	item := s.Value()
-	r, e = s.Next(ctx)
-	if e != nil {
-		return nil, e
-	} else if r {
-		return nil, errors.New(
-			"Too many values provided, expected empty sequence or singleton.",
-		)
-	}
-	return item, nil
-}
-
-/*
 Return a string out of a sequence, coercing anything to a string.
 If the sequence is the empty sequence, return ""
 If the sequence is a singleton, coerce it to string.
