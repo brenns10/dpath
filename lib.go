@@ -39,6 +39,8 @@ var (
 		Name: "ends-with", NumArgs: 2, Invoke: BuiltinEndsWithInvoke}
 	BUILTIN_STARTS_WITH = Builtin{
 		Name: "starts-with", NumArgs: 2, Invoke: BuiltinStartsWithInvoke}
+	BUILTIN_CONTAINS = Builtin{
+		Name: "contains", NumArgs: 2, Invoke: BuiltinContainsInvoke}
 )
 
 /*
@@ -281,6 +283,18 @@ func BuiltinStartsWithInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 	return newSingletonSequence(newBooleanItem(strings.HasPrefix(str1, str2))), nil
 }
 
+func BuiltinContainsInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	str1, err := funcGetString(ctx, args[0])
+	if err != nil {
+		return nil, err
+	}
+	str2, err := funcGetString(ctx, args[1])
+	if err != nil {
+		return nil, err
+	}
+	return newSingletonSequence(newBooleanItem(strings.Contains(str1, str2))), nil
+}
+
 /*
 Return a map of each builtin's name to its struct.
 */
@@ -294,5 +308,6 @@ func DefaultNamespace() map[string]Builtin {
 		"string-length": BUILTIN_STRING_LENGTH,
 		"ends-with":     BUILTIN_ENDS_WITH,
 		"starts-with":   BUILTIN_STARTS_WITH,
+		"contains":      BUILTIN_CONTAINS,
 	}
 }
