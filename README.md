@@ -41,8 +41,25 @@ $ dpath '//.'
 # recursively lists everything in the filesystem
 # on second thought, don't do that
 
-$ dpath '(1 to 10)[. mod 3 eq 1]'
-# lists numbers with remainder 1 when divided by 3 :)
+$ dpath '/home/stephen//.[ends-with(name(), ".png")]'
+# lists PNG files in home directory
+
+$ dpath '/home/stephen//.[contains(name(), "smb196")]'
+# finds files I named with my school ID, likely for homework submissions
+
+$ dpath '/home/stephen//.[matches(name(), ".*\w{3}\d{1,3}.*")]'
+# finds files that have any school ID in them
+# this turns up lots of junk because it's a common pattern
+
+$ dpath './/.[starts-with(name(), parent::*/name())]'
+# or just:
+$ dpath './/.[starts-with(name(), ../name())]'
+# finds files that start with their containing directory's name
+file:/home/stephen/go/src/github.com/brenns10/dpath/dpath.nex
+file:/home/stephen/go/src/github.com/brenns10/dpath/dpath.y
+file:/home/stephen/go/src/github.com/brenns10/dpath/dpath
+file:/home/stephen/go/src/github.com/brenns10/dpath/dpath.nn.go
+file:/home/stephen/go/src/github.com/brenns10/dpath/.git/objects/e9/e9f542b2423e029b7adc72f71265e2eabb63a6
 ```
 
 If you're interested in how this implementation works, I maintain the
@@ -63,8 +80,12 @@ Status
 * Value (`= != <= < >= >`) and General (`eq ne le lt ge gt`) comparisons. The
   difference being that Value requires singletons, whereas General will look for
   any pair of atomics in the input sequences that satisfy the comparisons.
+* Boolean logic expressions (`and or`)
 * Predicate syntax on sequences, e.g. `(1 to 5)[. mod 2 eq 0]` which evaluates
   to `(2, 4)`.
 * Path expressions on the child, parent, and descendant axes
-* The shorthand notations `*`, `..`, `//`
-* The `boolean()` function
+* The shorthand notations `*`, `..`, `//`, `#"spaces etc here"`
+* Functions: `boolean()`, `concat()`, `round()`, `substring()`, `string()`,
+  `string-length()`, `ends-with()`, `starts-with()`, `contains()`, `matches()`,
+  `empty()`, `exists()`, `name()`, `path()`.
+* Selectors: `file()`, `dir()`
