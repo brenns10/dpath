@@ -63,9 +63,9 @@ file:/home/stephen/go/src/github.com/brenns10/dpath/.git/objects/e9/e9f542b2423e
 ```
 
 If you're interested in how this implementation works, I maintain the
-file [GUIDE.md](), which should give some high-level explanation of how the
-language comes together. The low-level details can be read about in comments and
-code.
+file [GUIDE.md](GUIDE.md), which should give some high-level explanation of how
+the language comes together. The low-level details can be read about in comments
+and code.
 
 Status
 ------
