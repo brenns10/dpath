@@ -95,11 +95,11 @@ ExprSingle:     OrExpr {$$ = $1}
                 ;
 
 OrExpr:         AndExpr {$$ = $1}
-        |       AndExpr OR AndExpr {$$ = newBinopTree("or", $1, $3)}
+        |       OrExpr OR AndExpr {$$ = newBinopTree("or", $1, $3)}
                 ;
 
 AndExpr:        ComparisonExpr {$$ = $1}
-        |       ComparisonExpr AND ComparisonExpr {$$ = newBinopTree("and", $1, $3)}
+        |       AndExpr AND ComparisonExpr {$$ = newBinopTree("and", $1, $3)}
                 ;
 
 ComparisonExpr: RangeExpr {$$ = $1}
@@ -128,16 +128,16 @@ RangeExpr:      AdditiveExpr {$$ = $1}
                 ;
 
 AdditiveExpr:   MultiplicativeExpr {$$ = $1}
-        |       MultiplicativeExpr PLUS MultiplicativeExpr {$$ = newBinopTree("+", $1, $3)}
-        |       MultiplicativeExpr MINUS MultiplicativeExpr {$$ = newBinopTree("-", $1, $3)}
+        |       AdditiveExpr PLUS MultiplicativeExpr {$$ = newBinopTree("+", $1, $3)}
+        |       AdditiveExpr MINUS MultiplicativeExpr {$$ = newBinopTree("-", $1, $3)}
                 ;
 
 MultiplicativeExpr:
                 UnaryExpr {$$ = $1}
-        |       UnaryExpr MULTIPLY UnaryExpr {$$ = newBinopTree("*", $1, $3)}
-        |       UnaryExpr DIVIDE UnaryExpr {$$ = newBinopTree("div", $1, $3)}
-        |       UnaryExpr INTEGER_DIVIDE UnaryExpr {$$ = newBinopTree("idiv", $1, $3)}
-        |       UnaryExpr MODULUS UnaryExpr {$$ = newBinopTree("mod", $1, $3)}
+        |       MultiplicativeExpr MULTIPLY UnaryExpr {$$ = newBinopTree("*", $1, $3)}
+        |       MultiplicativeExpr DIVIDE UnaryExpr {$$ = newBinopTree("div", $1, $3)}
+        |       MultiplicativeExpr INTEGER_DIVIDE UnaryExpr {$$ = newBinopTree("idiv", $1, $3)}
+        |       MultiplicativeExpr MODULUS UnaryExpr {$$ = newBinopTree("mod", $1, $3)}
                 ;
 
 UnaryExpr:      ValueExpr {$$ = $1}

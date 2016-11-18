@@ -260,3 +260,36 @@ func TestCommaOperator(t *testing.T) {
 	assert.Equal(t, int64(5), getInteger(items[4]))
 	assert.Equal(t, int64(6), getInteger(items[5]))
 }
+
+func TestLeftAssociativity(t *testing.T) {
+	cases := []string{
+		"1.0 + 2.0 + 3.0",
+		"1.0 div 2.0 * 3.0",
+		"1.0 * 2.0 * 3.0",
+	}
+	results := []float64{6.0, 1.5, 6.0}
+	for i, uut := range cases {
+		seq, ctx := assertEvaluates(t, uut)
+		item := assertSingleton(t, ctx, seq)
+		assert.Equal(t, results[i], getDouble(item), uut)
+	}
+}
+
+func TestLeftAssociativityLogic(t *testing.T) {
+	cases := []string{
+		"boolean(1) and boolean(1) and boolean(1)",
+		"boolean(1) and boolean(1) and boolean(0)",
+		"boolean(1) and boolean(0) and boolean(1)",
+		"boolean(0) and boolean(1) and boolean(1)",
+		"boolean(0) or boolean(0) or boolean(1)",
+		"boolean(0) or boolean(1) or boolean(0)",
+		"boolean(1) or boolean(0) or boolean(0)",
+		"boolean(0) or boolean(0) or boolean(0)",
+	}
+	results := []bool{true, false, false, false, true, true, true, false}
+	for i, uut := range cases {
+		seq, ctx := assertEvaluates(t, uut)
+		item := assertSingleton(t, ctx, seq)
+		assert.Equal(t, results[i], getBool(item), uut)
+	}
+}
