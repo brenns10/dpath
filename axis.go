@@ -210,6 +210,16 @@ type AncestorOrSelfAxis struct {
 	*AncestorAxis
 }
 
+func (a *AncestorOrSelfAxis) GetByName(ctx *Context, name string) (Sequence, error) {
+	seq, err := a.Iterate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return newConditionFilter(seq, func(it Item) bool {
+		return getFile(it).Info.Name() == name
+	}), nil
+}
+
 func (a *AncestorOrSelfAxis) Iterate(ctx *Context) (Sequence, error) {
 	seq, err := a.AncestorAxis.Iterate(ctx)
 	if err != nil {
@@ -257,6 +267,16 @@ DescendantOrSelfAxis is just the DescendantAxis but with self added in.
 */
 type DescendantOrSelfAxis struct {
 	*DescendantAxis
+}
+
+func (a *DescendantOrSelfAxis) GetByName(ctx *Context, name string) (Sequence, error) {
+	seq, err := a.Iterate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return newConditionFilter(seq, func(it Item) bool {
+		return getFile(it).Info.Name() == name
+	}), nil
 }
 
 func (a *DescendantOrSelfAxis) Iterate(ctx *Context) (Sequence, error) {
