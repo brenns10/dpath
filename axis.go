@@ -75,6 +75,10 @@ func (a *ChildAxis) Iterate(ctx *Context) (Sequence, error) {
 			"Attempting to use ChildAxis when context item is not a file.",
 		)
 	}
+	// don't bother trying with files
+	if !ctxItem.Info.IsDir() {
+		return newEmptySequence(), nil
+	}
 	f, err := os.Open(ctxItem.Path)
 	if err != nil {
 		f.Close()
