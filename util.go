@@ -32,6 +32,25 @@ func getSingleItem(ctx *Context, s Sequence) (Item, error) {
 	return item, nil
 }
 
+func getZeroOrOne(ctx *Context, s Sequence) (Item, error) {
+	r, e := s.Next(ctx)
+	if e != nil {
+		return nil, e
+	} else if !r {
+		return nil, nil
+	}
+	item := s.Value()
+	r, e = s.Next(ctx)
+	if e != nil {
+		return nil, e
+	} else if r {
+		return nil, errors.New(
+			"Too many values provided, expected empty sequence or singleton.",
+		)
+	}
+	return item, nil
+}
+
 /*
 A utility function that "asserts" at least one item is in a sequence, panicking
 if that's not the case.

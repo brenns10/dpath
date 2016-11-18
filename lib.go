@@ -163,24 +163,18 @@ func BuiltinSubstringInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 		return nil, errors.New("substring requires 2 or 3 arguments")
 	}
 	// Get and check first argument. The spec has some pretty stupid semantics.
-	hasNext, err := args[0].Next(ctx)
+	item1, err := getZeroOrOne(ctx, args[0])
+	var str string
 	if err != nil {
 		return nil, err
-	}
-	var str string
-	if hasNext {
-		item1 := args[0].Value()
-		hasNext, err := args[0].Next(ctx)
-		if hasNext || err != nil {
-			return nil, errors.New("first arg to substring must be singleton or empty sequence")
-		}
-		if item1.TypeName() != TYPE_STRING {
-			return nil, errors.New("first arg to substring must be a string")
-		}
-		str = getString(item1)
-
-	} else {
+	} else if item1 == nil {
 		str = ""
+	} else if item1.TypeName() != TYPE_STRING {
+		return nil, errors.New(
+			"first arg to substring must be empty sequence or string",
+		)
+	} else {
+		str = getString(item1)
 	}
 	// Get and check second argument
 	item2, err := getSingleItem(ctx, args[1])
