@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 )
 
 /*
@@ -34,6 +35,8 @@ var (
 		Name: "string", NumArgs: -1, Invoke: BuiltinStringInvoke}
 	BUILTIN_STRING_LENGTH = Builtin{
 		Name: "string-length", NumArgs: -1, Invoke: BuiltinStringLengthInvoke}
+	BUILTIN_ENDS_WITH = Builtin{
+		Name: "ends-with", NumArgs: 2, Invoke: BuiltinEndsWithInvoke}
 )
 
 /*
@@ -224,7 +227,7 @@ func BuiltinStringInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 	if len(args) == 0 {
 		str = ctx.ContextItem.ToString()
 	} else if len(args) == 1 {
-		str, err = specGetString(ctx, args[0])
+		str, err = coerceGetString(ctx, args[0])
 		if err != nil {
 			return nil, err
 		}
@@ -241,7 +244,7 @@ func BuiltinStringLengthInvoke(ctx *Context, args ...Sequence) (Sequence, error)
 	if len(args) == 0 {
 		str = ctx.ContextItem.ToString()
 	} else if len(args) == 1 {
-		str, err = specGetString(ctx, args[0])
+		str, err = funcGetString(ctx, args[0])
 		if err != nil {
 			return nil, err
 		}
@@ -250,6 +253,18 @@ func BuiltinStringLengthInvoke(ctx *Context, args ...Sequence) (Sequence, error)
 	}
 
 	return newSingletonSequence(newIntegerItem(int64(len(str)))), nil
+}
+
+func BuiltinEndsWithInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	str1, err := funcGetString(ctx, args[0])
+	if err != nil {
+		return nil, err
+	}
+	str2, err := funcGetString(ctx, args[1])
+	if err != nil {
+		return nil, err
+	}
+	return newSingletonSequence(newBooleanItem(strings.HasSuffix(str1, str2))), nil
 }
 
 /*
@@ -263,5 +278,6 @@ func DefaultNamespace() map[string]Builtin {
 		"substring":     BUILTIN_SUBSTRING,
 		"string":        BUILTIN_STRING,
 		"string-length": BUILTIN_STRING_LENGTH,
+		"ends-with":     BUILTIN_ENDS_WITH,
 	}
 }

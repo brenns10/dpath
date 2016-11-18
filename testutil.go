@@ -101,15 +101,15 @@ Assert that a string parses, and return the parse tree.
 */
 func assertParses(t *testing.T, s string) ParseTree {
 	tree, e := ParseString(s)
-	assert.Nil(t, e)
+	assert.Nil(t, e, s)
 	return tree
 }
 
 func assertEvaluatesCtx(t *testing.T, s string, ctx *Context) Sequence {
 	tree, e := ParseString(s)
-	assert.Nil(t, e)
+	assert.Nil(t, e, s)
 	res, e := tree.Evaluate(ctx)
-	assert.Nil(t, e)
+	assert.Nil(t, e, s)
 	return res
 }
 

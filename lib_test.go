@@ -306,20 +306,66 @@ func TestStringBuiltin(t *testing.T) {
 
 func TestStringLengthBuiltin(t *testing.T) {
 	cases := []string{
-		"string-length(1)",
-		"string-length(1.1)",
-		"string-length(boolean(0))",
+		"string-length(())",
 		"string-length('hi there')",
 		"string-length()",
 	}
 	ctx := MockDefaultContext()
 	results := []int64{
-		1, 3, 5, 8, int64(len(ctx.ContextItem.ToString())),
+		0, 8, int64(len(ctx.ContextItem.ToString())),
 	}
 	for i, uut := range cases {
 		seq, ctx := assertEvaluates(t, uut)
 		item := assertSingleton(t, ctx, seq)
 		assert.IsType(t, (*IntegerItem)(nil), item, uut)
 		assert.Equal(t, results[i], getInteger(item), uut)
+	}
+}
+
+func TestStringLengthInvalid(t *testing.T) {
+	cases := []string{
+		"string-length(1)",
+		"string-length(1.1)",
+	}
+	for _, uut := range cases {
+		tree := assertParses(t, uut)
+		ctx := MockDefaultContext()
+		_, err := tree.Evaluate(ctx)
+		assert.Error(t, err, uut)
+	}
+}
+
+func TestEndsWith(t *testing.T) {
+	cases := []string{
+		"ends-with('abcdef', 'def')",
+		"ends-with('fedcba', 'abc')",
+		"ends-with((), ())",
+		"ends-with('', '')",
+		"ends-with('blah', '')",
+		"ends-with('blah', ())",
+		"ends-with('blah', 'blah')",
+	}
+	results := []bool{true, false, true, true, true, true, true}
+	for i, uut := range cases {
+		seq, ctx := assertEvaluates(t, uut)
+		item := assertSingleton(t, ctx, seq)
+		assert.IsType(t, (*BooleanItem)(nil), item, uut)
+		assert.Equal(t, results[i], getBool(item), uut)
+	}
+}
+
+func TestEndsWithInvalid(t *testing.T) {
+	cases := []string{
+		"ends-with()",
+		"ends-with('one')",
+		"ends-with('one', 5)",
+		"ends-with(3, 'one')",
+		"ends-with('one', 'two', 'three')",
+	}
+	for _, uut := range cases {
+		tree := assertParses(t, uut)
+		ctx := MockDefaultContext()
+		_, err := tree.Evaluate(ctx)
+		assert.Error(t, err, uut)
 	}
 }

@@ -32,6 +32,10 @@ func getSingleItem(ctx *Context, s Sequence) (Item, error) {
 	return item, nil
 }
 
+/*
+Return zero or one Items out of a sequence. If zero, the returned Item is nil.
+If there are more than one item in the sequence, raises an error.
+*/
 func getZeroOrOne(ctx *Context, s Sequence) (Item, error) {
 	r, e := s.Next(ctx)
 	if e != nil {
@@ -52,12 +56,12 @@ func getZeroOrOne(ctx *Context, s Sequence) (Item, error) {
 }
 
 /*
-Return a string out of a sequence.
+Return a string out of a sequence, coercing anything to a string.
 If the sequence is the empty sequence, return ""
 If the sequence is a singleton, coerce it to string.
 Otherwise, error.
 */
-func specGetString(ctx *Context, s Sequence) (string, error) {
+func coerceGetString(ctx *Context, s Sequence) (string, error) {
 	r, e := s.Next(ctx)
 	if e != nil {
 		return "", e
@@ -72,6 +76,33 @@ func specGetString(ctx *Context, s Sequence) (string, error) {
 		return "", errors.New(
 			"Too many values provided, expected empty sequence or singleton.",
 		)
+	}
+	return item.ToString(), nil
+}
+
+/*
+Return a string out of a sequence, coercing only files to a string.
+If the sequence is the empty sequence, return ""
+Otherwise, error.
+*/
+func funcGetString(ctx *Context, s Sequence) (string, error) {
+	r, e := s.Next(ctx)
+	if e != nil {
+		return "", e
+	} else if !r {
+		return "", nil
+	}
+	item := s.Value()
+	r, e = s.Next(ctx)
+	if e != nil {
+		return "", e
+	} else if r {
+		return "", errors.New(
+			"Too many values provided, expected empty sequence or singleton.",
+		)
+	}
+	if item.TypeName() != TYPE_STRING && item.TypeName() != TYPE_FILE {
+		return "", errors.New("expected file or string type")
 	}
 	return item.ToString(), nil
 }
