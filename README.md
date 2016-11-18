@@ -87,5 +87,5 @@ Status
 * The shorthand notations `*`, `..`, `//`, `#"spaces etc here"`
 * Functions: `boolean()`, `concat()`, `round()`, `substring()`, `string()`,
   `string-length()`, `ends-with()`, `starts-with()`, `contains()`, `matches()`,
-  `empty()`, `exists()`, `name()`, `path()`.
+  `empty()`, `exists()`, `name()`, `path()`, `count()`.
 * Selectors: `file()`, `dir()`

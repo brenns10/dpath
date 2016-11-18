@@ -53,6 +53,8 @@ var (
 		Name: "name", NumArgs: -1, Invoke: BuiltinNameInvoke}
 	BUILTIN_PATH = Builtin{
 		Name: "path", NumArgs: -1, Invoke: BuiltinPathInvoke}
+	BUILTIN_COUNT = Builtin{
+		Name: "count", NumArgs: 1, Invoke: BuiltinCountInvoke}
 )
 
 /*
@@ -382,6 +384,19 @@ func BuiltinPathInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 	return newSingletonSequence(newStringItem(p)), nil
 }
 
+func BuiltinCountInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	var n bool
+	var e error
+	count := int64(0)
+	for n, e = args[0].Next(ctx); n && e == nil; n, e = args[0].Next(ctx) {
+		count++
+	}
+	if e != nil {
+		return nil, e
+	}
+	return newSingletonSequence(newIntegerItem(count)), nil
+}
+
 /*
 Return a map of each builtin's name to its struct.
 */
@@ -401,5 +416,6 @@ func DefaultNamespace() map[string]Builtin {
 		"exists":        BUILTIN_EXISTS,
 		"name":          BUILTIN_NAME,
 		"path":          BUILTIN_PATH,
+		"count":         BUILTIN_COUNT,
 	}
 }

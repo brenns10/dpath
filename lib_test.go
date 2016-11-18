@@ -548,3 +548,32 @@ func TestNameInvalid(t *testing.T) {
 		assert.Error(t, err, uut)
 	}
 }
+
+func TestCount(t *testing.T) {
+	cases := []string{
+		"count(())",
+		"count(20)",
+		"count((1, 2, 3))",
+		"count((1 to 100)[. mod 2 eq 0])",
+	}
+	results := []int64{0, 1, 3, 50}
+	for i, uut := range cases {
+		seq, ctx := assertEvaluates(t, uut)
+		item := assertSingleton(t, ctx, seq)
+		assert.IsType(t, (*IntegerItem)(nil), item)
+		assert.Equal(t, results[i], getInteger(item), uut)
+	}
+}
+
+func TestCountInvalid(t *testing.T) {
+	cases := []string{
+		"count()",
+		"count(1, 2)",
+	}
+	for _, uut := range cases {
+		tree := assertParses(t, uut)
+		ctx := MockDefaultContext()
+		_, err := tree.Evaluate(ctx)
+		assert.Error(t, err, uut)
+	}
+}
