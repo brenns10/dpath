@@ -476,3 +476,39 @@ func TestMatchesInvalid(t *testing.T) {
 		assert.Error(t, err, uut)
 	}
 }
+
+func TestEmptyExists(t *testing.T) {
+	cases := []string{
+		"()",
+		"1",
+		"'hi'",
+		".",
+		"1.0",
+	}
+	results := []bool{true, false, false, false, false}
+	for i, uut := range cases {
+		uutEmpty := "empty(" + uut + ")"
+		seq, ctx := assertEvaluates(t, uutEmpty)
+		item := assertSingleton(t, ctx, seq)
+		assert.IsType(t, (*BooleanItem)(nil), item, uutEmpty)
+		assert.Equal(t, results[i], getBool(item), uutEmpty)
+		uutExists := "exists(" + uut + ")"
+		seq, ctx = assertEvaluates(t, uutExists)
+		item = assertSingleton(t, ctx, seq)
+		assert.IsType(t, (*BooleanItem)(nil), item, uutExists)
+		assert.Equal(t, !results[i], getBool(item), uutExists)
+	}
+}
+
+func TestEmptyExistsInvalid(t *testing.T) {
+	cases := []string{
+		"empty()", "exists()",
+		"empty(1, 2)", "exists(1, 2)",
+	}
+	for _, uut := range cases {
+		tree := assertParses(t, uut)
+		ctx := MockDefaultContext()
+		_, err := tree.Evaluate(ctx)
+		assert.Error(t, err, uut)
+	}
+}

@@ -44,6 +44,10 @@ var (
 		Name: "contains", NumArgs: 2, Invoke: BuiltinContainsInvoke}
 	BUILTIN_MATCHES = Builtin{
 		Name: "matches", NumArgs: 2, Invoke: BuiltinMatchesInvoke}
+	BUILTIN_EMPTY = Builtin{
+		Name: "empty", NumArgs: 1, Invoke: BuiltinEmptyInvoke}
+	BUILTIN_EXISTS = Builtin{
+		Name: "exists", NumArgs: 1, Invoke: BuiltinExistsInvoke}
 )
 
 /*
@@ -315,6 +319,24 @@ func BuiltinMatchesInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 	return newSingletonSequence(newBooleanItem(found == str1)), nil
 }
 
+func BuiltinEmptyInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	hasNext, err := args[0].Next(ctx)
+	if err != nil {
+		return nil, err
+	} else {
+		return newSingletonSequence(newBooleanItem(!hasNext)), nil
+	}
+}
+
+func BuiltinExistsInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	hasNext, err := args[0].Next(ctx)
+	if err != nil {
+		return nil, err
+	} else {
+		return newSingletonSequence(newBooleanItem(hasNext)), nil
+	}
+}
+
 /*
 Return a map of each builtin's name to its struct.
 */
@@ -330,5 +352,7 @@ func DefaultNamespace() map[string]Builtin {
 		"starts-with":   BUILTIN_STARTS_WITH,
 		"contains":      BUILTIN_CONTAINS,
 		"matches":       BUILTIN_MATCHES,
+		"empty":         BUILTIN_EMPTY,
+		"exists":        BUILTIN_EXISTS,
 	}
 }
