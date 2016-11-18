@@ -163,6 +163,65 @@ func (a *ParentAxis) Iterate(ctx *Context) (Sequence, error) {
 }
 
 /*
+AncestorAxis contains only the parent of a file.
+*/
+type AncestorAxis struct {
+}
+
+func newAncestorAxis() *AncestorAxis {
+	return &AncestorAxis{}
+}
+
+func (a *AncestorAxis) GetByName(ctx *Context, name string) (Sequence, error) {
+	seq, err := a.Iterate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return newConditionFilter(seq, func(it Item) bool {
+		return getFile(it).Info.Name() == name
+	}), nil
+}
+
+func (a *AncestorAxis) Iterate(ctx *Context) (Sequence, error) {
+	ctxItem, ok := ctx.ContextItem.(*FileItem)
+	if !ok {
+		return nil, errors.New(
+			"Attempting to use AncestorAxis when context item is not a file.",
+		)
+	}
+
+	ancestors := make([]Item, 0, 5)
+	p := ctxItem.Path
+	for path.Join(p, "..") != p {
+		p = path.Join(p, "..")
+		newItem, err := newFileItem(p)
+		if err != nil {
+			panic("error finding parent of file node")
+		}
+		ancestors = append(ancestors, newItem)
+	}
+	return newWrapperSequence(ancestors), nil
+}
+
+/*
+DescendantOrSelfAxis is just the DescendantAxis but with self added in.
+*/
+type AncestorOrSelfAxis struct {
+	*AncestorAxis
+}
+
+func (a *AncestorOrSelfAxis) Iterate(ctx *Context) (Sequence, error) {
+	seq, err := a.AncestorAxis.Iterate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return newConcatenateSequence(
+		newSingletonSequence(ctx.ContextItem),
+		seq,
+	), nil
+}
+
+/*
 DescendantAxis returns children and children of children. Its implementation is
 mostly found within the DescendantSequence.
 */
@@ -243,6 +302,8 @@ func DefaultContext() *Context {
 		"parent":             &ParentAxis{},
 		"descendant":         &DescendantAxis{},
 		"descendant-or-self": &DescendantOrSelfAxis{},
+		"ancestor":           &AncestorAxis{},
+		"ancestor-or-self":   &AncestorOrSelfAxis{},
 	}
 	return &Context{
 		ContextItem: item,

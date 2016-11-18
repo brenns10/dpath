@@ -83,7 +83,8 @@ Status
 * Boolean logic expressions (`and or`)
 * Predicate syntax on sequences, e.g. `(1 to 5)[. mod 2 eq 0]` which evaluates
   to `(2, 4)`.
-* Path expressions on the child, parent, and descendant axes
+* Path expressions on the following axes: `child`, `parent`, `descendant`,
+  `descendant-or-self`, `ancestor`, `ancestor-or-self`.
 * The shorthand notations `*`, `..`, `//`, `#"spaces etc here"`
 * Functions: `boolean()`, `concat()`, `round()`, `substring()`, `string()`,
   `string-length()`, `ends-with()`, `starts-with()`, `contains()`, `matches()`,
