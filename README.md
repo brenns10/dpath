@@ -65,6 +65,9 @@ $ dpath './/file()[@size > 4096]'
 # find files greater than 4K bytes
 ```
 
+A full description of the usage is described in [SYNTAX.md](SYNTAX.md), although
+that document assumes a basic knowledge of XPath.
+
 If you're interested in how this implementation works, I maintain the
 file [GUIDE.md](GUIDE.md), which should give some high-level explanation of how
 the language comes together. The low-level details can be read about in comments
