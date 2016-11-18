@@ -37,9 +37,9 @@ there, try some queries:
 $ dpath './/.'
 # recursively lists this subdirectory and everything under it
 
-$ dpath '//.'
-# recursively lists everything in the filesystem
-# on second thought, don't do that
+$ dpath './/.[empty(ancestor-or-self::#".git")]'
+# recursively lists this subdirectory, filtering out things within a .git
+# directory.
 
 $ dpath '/home/stephen//.[ends-with(name(), ".png")]'
 # lists PNG files in home directory
