@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"path"
 	"regexp"
 	"strings"
 )
@@ -48,6 +49,10 @@ var (
 		Name: "empty", NumArgs: 1, Invoke: BuiltinEmptyInvoke}
 	BUILTIN_EXISTS = Builtin{
 		Name: "exists", NumArgs: 1, Invoke: BuiltinExistsInvoke}
+	BUILTIN_NAME = Builtin{
+		Name: "name", NumArgs: -1, Invoke: BuiltinNameInvoke}
+	BUILTIN_PATH = Builtin{
+		Name: "path", NumArgs: -1, Invoke: BuiltinPathInvoke}
 )
 
 /*
@@ -337,6 +342,46 @@ func BuiltinExistsInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 	}
 }
 
+func BuiltinNameInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	var item Item
+	var err error
+	if len(args) == 1 {
+		item, err = getSingleItem(ctx, args[0])
+		if err != nil {
+			return nil, err
+		}
+	} else if len(args) == 0 {
+		item = ctx.ContextItem
+	} else {
+		return nil, errors.New("wrong number of arguments to name()")
+	}
+	if item.TypeName() != TYPE_FILE {
+		return nil, errors.New("name() expects argument of type file)")
+	}
+	return newSingletonSequence(newStringItem(getFile(item).Info.Name())), nil
+}
+
+func BuiltinPathInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
+	var item Item
+	var err error
+	if len(args) == 1 {
+		item, err = getSingleItem(ctx, args[0])
+		if err != nil {
+			return nil, err
+		}
+	} else if len(args) == 0 {
+		item = ctx.ContextItem
+	} else {
+		return nil, errors.New("wrong number of arguments to path()")
+	}
+	if item.TypeName() != TYPE_FILE {
+		return nil, errors.New("path() expects argument of type file)")
+	}
+	file := getFile(item)
+	p := path.Join(file.Path, file.Info.Name())
+	return newSingletonSequence(newStringItem(p)), nil
+}
+
 /*
 Return a map of each builtin's name to its struct.
 */
@@ -354,5 +399,7 @@ func DefaultNamespace() map[string]Builtin {
 		"matches":       BUILTIN_MATCHES,
 		"empty":         BUILTIN_EMPTY,
 		"exists":        BUILTIN_EXISTS,
+		"name":          BUILTIN_NAME,
+		"path":          BUILTIN_PATH,
 	}
 }

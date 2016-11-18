@@ -512,3 +512,39 @@ func TestEmptyExistsInvalid(t *testing.T) {
 		assert.Error(t, err, uut)
 	}
 }
+
+func TestNamePath(t *testing.T) {
+	cases := []string{
+		"name(.)",
+		"path(.)",
+		"name()",
+		"path()",
+	}
+	results := []string{
+		"MockedDir",
+		"/MockedDir",
+		"MockedDir",
+		"/MockedDir",
+	}
+	for i, uut := range cases {
+		seq, ctx := assertEvaluates(t, uut)
+		item := assertSingleton(t, ctx, seq)
+		assert.IsType(t, (*StringItem)(nil), item, uut)
+		assert.Equal(t, results[i], getString(item), uut)
+	}
+}
+
+func TestNameInvalid(t *testing.T) {
+	cases := []string{
+		"name('one')", "path('one')",
+		"name('one', 5)", "path('one', 5)",
+		"name(3, 'one')", "path(3, 'one')",
+		"name('one', 'two', 'three')", "path('one', 'two', 'three')",
+	}
+	for _, uut := range cases {
+		tree := assertParses(t, uut)
+		ctx := MockDefaultContext()
+		_, err := tree.Evaluate(ctx)
+		assert.Error(t, err, uut)
+	}
+}
