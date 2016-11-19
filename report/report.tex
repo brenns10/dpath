@@ -101,7 +101,7 @@ line on standard output. An example query is presented below.
 
 \begin{lstlisting}
 stephen at greed in ~/go/src/github.com/brenns10/dpath
-$ dpath './.[starts-with(name(), ../name())]'
+$ dpath './.[starts-with(name(.), name(..))]'
 file:/home/stephen/go/src/github.com/brenns10/dpath/dpath.nn.go
 file:/home/stephen/go/src/github.com/brenns10/dpath/dpath.y
 file:/home/stephen/go/src/github.com/brenns10/dpath/dpath
@@ -109,7 +109,7 @@ file:/home/stephen/go/src/github.com/brenns10/dpath/dpath.nex
 \end{lstlisting}
 
 This query returns files from the DPath source directory which start with the
-same name as their containing directory.
+name of their containing directory.
 
 The remainder of this report will be organized as follows.
 Section~\ref{sec:xpath} will give a detailed description of the XPath query
@@ -121,13 +121,196 @@ this project, and Section~\ref{sec:related} will discuss related work.
 \label{sec:xpath}
 
 The XPath language is standardized by the World Wide Web Consortium (W3C), and
-it is used within the XQuery and XSLT languages, which are also W3C standards
-\cite{xpath}. In the research and development of DPath, we focused on the 2.0
-version of the XPath standard.
+it is embedded within the XQuery and XSLT languages, which are also W3C
+standards \cite{xpath}. In the research and development of DPath, we focused on
+the 2.0 version of the XPath standard. There are several parts to the XPath
+standard: syntax\cite{xpath}, semantics\cite{xpath-semantics}, data
+model\cite{xpath-datamodel}, type system, operators, and built-in function
+library\cite{xpath-functions}.
 
-There are several parts to the XPath standard: syntax\cite{xpath},
-semantics\cite{xpath-semantics}, data model\cite{xpath-datamodel}, type system,
-operators, and built-in function library\cite{xpath-functions}.
+\subsection{Syntax}
+
+XPath is a context-free grammar consisting of a few types of lexical tokens:
+literals, names, and symbols. Numeric literals can be expressed in integer,
+decimal, and scientific notations, while string literals are enclosed in single
+or double quotes. The only character escaped within a string literal is the
+delimiter itself. When the string delimiter occurs within the string, it is
+repeated twice. For example, the string literal \texttt{'Madam I''m Adam'} is
+equivalent to the string \texttt{Madam I'm Adam}.
+
+The XPath syntax for expressing identifiers is the QName, which stands for a
+``qualified name'' \cite{xml-names}. A qualified name is a pair consisting of a
+``namespace name,'' which is a URI, and a ``local name''. The namespace URI is
+bound to a small prefix which is then used in the QName. For instance, the
+following prefixes are used throughout the XPath specification\cite{xpath}:
+
+\begin{itemize}
+\item \texttt{xs = http://www.w3.org/2001/XMLSchema}
+\item \texttt{fn = http://www.w3.org/2005/xpath-functions}
+\item \texttt{err = http://www.w3.org/2005/xqt-errors}
+\end{itemize}
+
+With these prefixes, a QName like \texttt{xs:integer} would refer to the local
+name \texttt{integer} in the XML Schema namespace, while \texttt{fn:count} would
+refer to the local name \texttt{count} within the XPath Functions namespace.
+QNames may be represented without a namespace name, in which case the name is
+assumed to come from the default namespace. The local part of a QName must start
+with a letter or underscore (or a selection of other Unicode code points). The
+remainder of the name may additionally contain hyphens, periods, or digits, but
+no whitespace.
+
+Whitespace is not significant in XPath, except in a few cases where it separates
+tokens~\cite{xpath}. Otherwise, an expression such as \texttt{Student/Course} is
+equivalent to \texttt{Student / Course}.
+
+The XPath grammar is familiar to those who have implemented an expression
+language. It resembles a simple expression grammar, with different non-terminals
+representing each ``level'' of operator precedence. The slash operator, used to
+create path expressions, has higher precedence than all of the arithmetic
+operators. Most of the details of the grammar are not relevant to our
+discussion, but may be found in EBNF form in the XPath
+Specification~\cite{xpath}.
+
+\subsection{Data Model}
+
+XPath is built on some fundamental concepts that should be well understood in
+order to implement it. First, the data model. XPath's data model is made up of
+Items and Sequences~\cite{xpath-datamodel}. An Item is defined as any single
+value, which could be an XML node, or an atomic value such as a number or
+string. The types of these items are represented as QNames. There are several
+types defined in the XPath specification, most of which are not relevant to our
+discussion.
+
+A Sequence contains zero or more Items, which may be of heterogeneous
+types~\cite{xpath-datamodel}. Sequences are flat, meaning they may not contain
+other sequences. There is no distinction between an Item and a Sequence
+containing a single Item (commonly referred to as a singleton). Therefore, every
+XPath expression returns a Sequence.
+
+XPath represents XML documents with a tree of nodes (each of which is an Item)
+that must be constructed prior to evaluating a path expression. This parsed
+document tree includes nearly every part of the document. Elements are nodes,
+but so are attributes, comments, and text enclosed within an element.
+
+\subsection{Semantics}
+
+When an XPath expression is evaluated, several pieces of information are known
+by the engine and kept as ``context.'' The pieces of information than are known
+only during evaluation of an expression are called the ``dynamic context'', and
+are critical for understanding the semantics of path expressions~\cite{xpath}.
+In particular, the dynamic context includes a ``context item'', which is an Item
+(as defined in the data model) that is currently being processed. The context
+also includes the ``context position'', which contains the index of the context
+item within its containing sequence.
+
+With an understanding of the context item, we can begin to describe the
+semantics of a Path expression. A path expression can be represented as a
+sequence of \emph{steps}. For instance, the path \texttt{Student/Course} has two
+steps, \texttt{Student} and \texttt{Course}. A step is made up of two parts: an
+\emph{axis} and a \emph{test}. The axis can be thought of as the ``direction''
+in which to take a step, \emph{relative to the context object}. The test selects
+certain types or names of nodes from that axis. The axis and test are
+represented together with the syntax \texttt{axis::test}. When the axis is not
+provided, it is assumed to be the child axis. Therefore, the \texttt{Student}
+step will yield a sequence of nodes that are children of the context item and
+have name \texttt{Student}. The subsequent \texttt{Child} step is applied to
+each item yielded by the previous step. That is, for every item in the output of
+the previous step, the context item is set to this item, and the \texttt{Child}
+step is evaluated, yielding nodes which are children of the \texttt{Student}
+node which are also \texttt{Child} nodes. The result of a path expression is a
+Sequence that contains every result of the last step of the path.
+
+\subsubsection{Axes}
+
+Several axes exist on which to write paths. The most common is the
+\texttt{child} axis, which we have seen. The next is the \texttt{parent} axis,
+which returns the node containing the context item. Another common axis is the
+\texttt{descendant} axis, which contains every item which is a child of the
+context item, or a child of its children, etc. It can be thought of as the
+``transitive closure'' of the \texttt{child} axis. Similarly, the
+\texttt{ancestor} axis can be thought of as the ``transitive closure'' of the
+\texttt{parent} axis, yielding the parent and every subsequent parent of the
+context item. Finally, since the context item is not included in the
+\texttt{descendant} or \texttt{ancestor} axes, there are additionally the
+\texttt{descendant-or-self} and \texttt{ancestor-or-self} axes, which include
+the context item. XPath additionally defines a \texttt{self} axis as well as
+\texttt{following}, \texttt{following-sibling}, \texttt{preceding}, and
+\texttt{preceding-sibling}, which are less relevant to our upcoming discussion
+on DPath. Finally, the \texttt{attribute} axis yields attributes of the context
+element.
+
+One important notion XPath has is ``document order.'' That is, nodes can be
+ordered according to when they occur in the document. All of the axes are
+defined to return items with an ordering related to the document order. Forward
+Axes (such as \texttt{child}, \texttt{descendant}, and \texttt{following})
+return items in document order, while Reverse Axes (such as \texttt{ancestor}
+and \texttt{preceding}) return items in the opposite order they occur in the
+document.
+
+\subsubsection{Tests}
+
+There are two types of tests in XPath step expressions: a ``kind'' test and a
+``name'' test. The ``kind'' test can filter items from an axis to a particular
+type of item such as an element, a text node, or a comment. The syntax of
+``kind'' tests looks like this: \texttt{Student/comment()}, an expression which
+selects comment nodes whose parent is the \texttt{Student} item. The ``name''
+test can filter items from an axis to those with a particular name. If any name
+is allowable, using an asterisk will return everything from an axis. We have
+already seen the syntax for these name tests.
+
+\subsubsection{Shorthand}
+
+A few shorthand notations are introduced in XPath to simplify commonly used
+queries. We have already seen that the child axis is default, and so it need not
+be qualified. Another shorthand is that \texttt{@} is short for
+\texttt{attribute::}, and so a step like \texttt{@size} would select the
+``size'' attribute of an element. The syntax \texttt{..} is short for
+\texttt{parent::node()}, which selects the parent of the context item. Finally,
+the syntax \texttt{//} is replaced by \texttt{/descendant-or-self::node()/}.
+
+Finally, a path may be rooted or relative. A rooted path starts with a leading
+slash, and indicates that the context item should be set to the root element of
+the current document before evaluating the path. Otherwise, a relative path uses
+the existing context item when evaluating the first step.
+
+\subsubsection{Predicates}
+
+Any expression returning a sequence, including full path expressions, or steps
+within a path, may be filtered by one or more predicates. Each predicate is an
+expression following the expression to be filtered, enclosed in square brackets.
+The predicate is evaluated once for each item in the sequence. Each time, the
+context item is set to an item from the sequence. If the result of the predicate
+is a singleton numeric, then it is compared against the ``context position''. If
+it is equal, the item is yielded by the predicate, otherwise, it is skipped. If
+the result of the predicate is not a singleton numeric, it is coerced to a
+Boolean, and used similarly to filter the current item.
+
+\subsubsection{Arithmetic}
+
+XPath includes several numeric types, and as a result it supports most common
+arithmetic operations, including addition, subtraction, multiplication,
+division, integer division, and the remainder operation. It also supports
+comparison operators and boolean operators for complex conditions.
+
+\subsubsection{Comparisons}
+
+Since every XPath expression is a sequence, comparison operations have some
+interesting semantics. There are two sets of comparison operators in XPath. The
+first set are ``Value Comparison'' operators: \texttt{eq, ne, le, lt, ge, gt}.
+They accept only singletons as their operands, and so they compare exactly one
+value against exactly one other value.
+
+The second set of comparison operators is the ``General Comparison'' operators:
+\texttt{=, !=, <=, <, >=, >}. These take any sequence of operands and return
+true if there exists any pair of items from the sequences that satisfy the
+comparison conditions. Thus, they may be thought of as ``existential
+comparisons.''
+
+\subsubsection{Functions}
+
+Finally, XPath includes a library of built-in functions with utility operations
+that can be applied to strings, numbers, booleans, and nodes. There are several
+relevant functions, which will be discussed in the following sections.
 
 \section{DPath Implementation}
 \label{sec:dpath}
