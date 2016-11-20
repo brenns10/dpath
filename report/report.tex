@@ -114,8 +114,9 @@ name of their containing directory.
 The remainder of this report will be organized as follows.
 Section~\ref{sec:xpath} will give a detailed description of the XPath query
 language's syntax and semantics. Section~\ref{sec:dpath} will describe the
-implementation of DPath. Section~\ref{sec:future} will discuss future work for
-this project, and Section~\ref{sec:related} will discuss related work.
+implementation of DPath. Section~\ref{sec:related} will discuss work related to
+this project, and Section~\ref{sec:future} will future improvements to this
+project.
 
 \section{XPath}
 \label{sec:xpath}
@@ -392,9 +393,11 @@ parse tree or an error.
 The returned parse tree is an ``interface'' which supports printing (for
 diagnostics) and evaluation. The \texttt{ParseTree} interface has an
 implementation for many different productions in the grammar. For instance, it
-has a \texttt{BinopTree} implementation which represents a binary operator,
-containing a string operator and two \texttt{ParseTree} operands. So, code
-evaluation is distributed across the parse tree objects (in \texttt{tree.go}).
+has a \texttt{BinopTree} implementation which represents a binary operator and
+contains a string operator along with two \texttt{ParseTree} operands.
+
+Code evaluation is therefore distributed across \texttt{Evaluate()} methods of
+the parse tree objects, which may all be found in \texttt{tree.go}.
 
 \subsection{Data Model}
 
@@ -408,11 +411,11 @@ which supports two major operations: \texttt{Value()}, which returns the current
 value in the sequence, and \texttt{Next()}, which advances the sequence forward
 by one. Several implementations of this interface exist. Some, like the
 \texttt{WrapperSequence}, simply wrap arrays of \texttt{Items}. Others, like
-\texttt{PathSequence} and \texttt{DescendantSequence}, dynamically produce a
-steady stream of items. Still others, like the \texttt{ConditionFilter}, wrap
-``source'' sequences and filter out those which don't match a condition. By
-creating and composing sequences, the evaluation functions can produce complex
-sequences that produce desired query results.
+\texttt{DescendantSequence} and \texttt{RangeSequence}, dynamically produce a
+steady stream of items. Still others, like the \texttt{ExpressionFilter}, wrap
+source sequences and filter out those which don't match a condition. By creating
+and composing sequences, the evaluation functions can produce complex sequences
+that produce desired query results.
 
 Finally, an important part of the data model is the \texttt{Axis} interface.
 This interface requires two methods: \texttt{GetByName()}, which helps implement
@@ -453,13 +456,14 @@ First, the parser produces the following tree:
                                 mod
                                 [.LiteralTree 2 ]]
                     eq
-                    [.LiteralTree 0 ]]]
+                    [.LiteralTree 0 ]]
+]
 
 Next, \texttt{Evaluate()} is called on the \texttt{FilteredSequenceTree}. This
 function first evaluates \texttt{BinopTree} on the left hand side, which returns
-a \texttt{RangeSequence}. The \texttt{RangeSequence} increments a counter each
-time \texttt{Next()} is called, starting from the left operand and ending at the
-right operand. This \texttt{RangeSequence} is returned back to the
+a \texttt{RangeSequence}. The \texttt{RangeSequence} dynamically creates a list
+of numbers from 1 to 10, computing the next one each time \texttt{Next()} is
+called. This \texttt{RangeSequence} is returned back to the
 \texttt{FilteredSequenceTree}, which uses it to create an
 \texttt{ExpressionFilter}. This is another sequence type, which takes a source
 sequence and a list of \texttt{ParseTrees} which are predicates. For each item
@@ -513,7 +517,7 @@ sequences:
 The most important sequence to understand is the \texttt{PathSequence}. This
 sequence is used to evaluate any path that has multiple steps. It takes as input
 a source sequence, which is the result of evaluating the previous step. It also
-takes as input the \texttt{ParseTree} of the current step. For each item out of
+takes as input the \texttt{ParseTree} of the current step. For each item from
 the input sequence, it sets the current context to that item and evaluates the
 parse tree on that item. It then yields items from the resulting sequence. When
 that sequence runs out, it requests a new item from the source, evaluates the
@@ -526,12 +530,12 @@ item. In this case, the context item is the current directory. This item is
 passed into the parent \texttt{PathSequence}, which evaluates the implicit
 \texttt{descendant-or-self::*} expression on that context item. This calls
 \texttt{Iterate()} on the \texttt{DescendantOrSelfAxis}. Since the
-\texttt{descendant-or-self} axis is a combination of the current context item,
-it simply concatenates a sequence containing the current context item with a
-special sequence called \texttt{DescendantSequence}.
+\texttt{descendant-or-self} axis is a combination of the current context item
+and its descendants, it simply concatenates a sequence containing the current
+context item with a special sequence called \texttt{DescendantSequence}.
 
 The \texttt{DescendantSequence} implements a depth first search. It operates by
-first finding all the child directories of the current context item (using the
+first finding all the children of the current context item (using the
 \texttt{readdir} system call). As it yields these children, it checks them one
 by one to see if they are directories. If they are, they are added to a stack,
 to be expanded later. Once the sequence of children is exhausted,
@@ -546,22 +550,58 @@ context item (or an empty sequence when the context item is a file).
 
 It's interesting to note that the output of the first two steps is all
 descendants of the current directory, \emph{including the current directory}.
-But when this sequence is passed into the last step, all the files are filtered,
-and each directory is iterated over again! The only observable effect of this is
-that the current directory is not included in the final output, whereas it would
-have been included if the query were simply the first two steps (i.e.
-\texttt{./descendant-or-self::*}). In fact, it makes sense that a path
-containing the step \texttt{descendant-or-self::*} followed by \texttt{child::*}
-could be simplified to \texttt{descendant::*}, and a simple optimizer could
-certainly take advantage of this fact. However, DPath includes no query
-optimization, always using the na\"ive approach that exactly mirrors the
-semantics of a query.
+But when this sequence is passed into the last step, all the files are filtered
+(since they have no children), and each directory is iterated over again! The
+only observable effect of this is that the current directory is not included in
+the final output, whereas it would have been included if the query were simply
+the first two steps (i.e. \texttt{./descendant-or-self::*}). In fact, it makes
+sense that a path containing the step \texttt{descendant-or-self::*} followed by
+\texttt{child::*} could be simplified to \texttt{descendant::*}, and a simple
+optimizer could certainly take advantage of this fact. However, DPath includes
+no query optimization, always using the na\"ive approach that exactly mirrors
+the semantics of a query.
+
+\subsection{Built-in Functions and Attributes}
+
+DPath has XPath's powerful path syntax for referencing items in a tree structure
+using their parent, child, ancestor, and descendant relationships. However, this
+would not be useful without the ability to apply more conditions on these
+relationships. As such, DPath implements a substantial subset of XPath's
+built-in functions, especially focusing on string operations. This section
+provides a brief listing of these functions. More documentation is available in
+the \texttt{SYNTAX.md} file included in the DPath source directory.
+
+\begin{itemize}
+\item \texttt{string()}, \texttt{concat()}, and \texttt{substring()} for
+  converting and concatenating, and taking substrings of strings.
+\item \texttt{string-length()} for counting characters in strings.
+\item \texttt{starts-with()}, \texttt{ends-with()}, and \texttt{contains()} for
+  checking conditions on strings.
+\item \texttt{matches()} for matching strings against regular expressions.
+\item \texttt{count()} for finding the length of sequences, along with
+  \texttt{empty()} and \texttt{exists()} for checking special cases of these
+  lengths.
+\item \texttt{not()} for inverting booleans and \texttt{boolean()} for
+  converting anything to a boolean.
+\item \texttt{path()} for returning a file's full path, and \texttt{name()} for
+  returning its base name.
+\item \texttt{round()} for rounding a number
+\end{itemize}
+
+In addition, the XPath attribute axis has an analog in DPath. The DPath
+attribute axis contains only one item, the size of the context item. For
+instance, \texttt{y.go/@size} returns the integer 21474, the size of the file in
+bytes.
+
+\section{Related Work}
+\label{sec:related}
+
+A discussion of file system querying would not be complete without mentioning
+the GNU Find Utils.
 
 \section{Future Work}
 \label{sec:future}
 
-\section{Related Work}
-\label{sec:related}
 
 
 \bibliographystyle{ieeetr}
