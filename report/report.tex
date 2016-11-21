@@ -448,6 +448,7 @@ are divisible by 2. Thus, the output of this expression should be the sequence
 
 First, the parser produces the following tree:
 
+\begin{figure}[h]
 \Tree [.FilteredSequenceTree
         [.BinopTree [.LiteralTree 1 ]
                     to
@@ -458,6 +459,7 @@ First, the parser produces the following tree:
                     eq
                     [.LiteralTree 0 ]]
 ]
+\end{figure}
 
 Next, \texttt{Evaluate()} is called on the \texttt{FilteredSequenceTree}. This
 function first evaluates \texttt{BinopTree} on the left hand side, which returns
@@ -497,22 +499,26 @@ Next, let us consider the following query.
 This query returns all files that are descendants of the current directory. The
 following is the effective parse tree:
 
+\begin{figure}[h]
 \Tree[.PathTree .
                 [.AxisTree \texttt{descendant-or-self}
                            [.NameTree * ]]
                 [.NameTree * ]
 ]
+\end{figure}
 
 In order to evaluate this query, an entire system of sequences are created and
 combined. The following tree represents the structure of the system of
 sequences:
 
+\begin{figure}[h]
 \Tree[.PathSequence [.PathSequence [.WrapperSequence(.) ]
                                    [.ConcatenateSequence
                                        [.WrapperSequence(.) ]
                                        [.DescendantSequence ]]]
                     [.WrapperSequence(*) ]
 ]
+\end{figure}
 
 The most important sequence to understand is the \texttt{PathSequence}. This
 sequence is used to evaluate any path that has multiple steps. It takes as input
