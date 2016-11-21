@@ -83,7 +83,7 @@ func MockDefaultContext() *Context {
 	}
 	return &Context{
 		Axes:        axes,
-		ContextItem: MockFile("/", "MockedDir", true),
+		ContextItem: MockFile("/MockedDir", "MockedDir", true),
 		CurrentAxis: axes["child"],
 		Namespace:   DefaultNamespace(),
 	}

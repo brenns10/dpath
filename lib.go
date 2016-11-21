@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"path"
 	"regexp"
 	"strings"
 )
@@ -377,8 +376,7 @@ func BuiltinPathInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
 		return nil, errors.New("path() expects argument of type file)")
 	}
 	file := getFile(item)
-	p := path.Join(file.Path, file.Info.Name())
-	return newSingletonSequence(newStringItem(p)), nil
+	return newSingletonSequence(newStringItem(file.Path)), nil
 }
 
 func BuiltinCountInvoke(ctx *Context, args ...Sequence) (Sequence, error) {
