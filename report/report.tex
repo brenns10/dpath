@@ -597,12 +597,59 @@ bytes.
 \label{sec:related}
 
 A discussion of file system querying would not be complete without mentioning
-the GNU Find Utils.
+the GNU Findutils~\cite{find}. This is a collection of file search programs
+(\texttt{find}, \texttt{locate}, \texttt{xargs}, and \texttt{updatedb}) which
+are distributed as standard on many Linux and other Unix-based computers. The
+\texttt{find} program serves a similar purpose to DPath, but instead of
+evaluating XPath queries, it uses a system of command-line flags to specify
+search criteria.
+
+GNU \texttt{find} is capable of searching based on conditions on the file path
+and size (both of which DPath supports), as well as modes, owner, permissions,
+and access times (which DPath does not support). It allows the user to ``prune''
+the search tree by specifying a max recursion depth, or specifying folders not
+to descend into. DPath is capable of these restrictions, but they are not
+evaluated efficiently, since they must be expressed as predicates on the
+sequence of items which is already being traversed.
+
+One critical feature that GNU Findutils has is the capability to create a
+filesystem index and query that, rather than searching the file system each time
+a query runs. This functionality is mostly used for fast name searches, since
+file names change much less frequently than other metadata. This feature is
+important because, during file system searches, the limiting factor is
+frequently not the speed of the query evaluator, but rather the number of times
+the disk is accessed for file system calls such as \texttt{readdir()} and
+\texttt{stat()}. File system indices can reduce or eliminate these system calls,
+but require regular updates (similar to database indices).
+
+Another important thing to note is that DPath is not a novel invention. We were
+able to find at least one other implementation of XPath on the file system on
+the Internet~\cite{other}. In fact, this implementation was integrated with the
+GNU \texttt{find} tool, although it required extensive modifications in order to
+run. This implementation exposed more file attributes to the system and included
+a maximum depth option, and it relied on a pre-made XPath library rather than
+implementing its own.
 
 \section{Future Work}
 \label{sec:future}
 
+There are several opportunities for improving DPath in the future. First, it
+would be beneficial to include more filesystem metadata in the attribute axis of
+files. However, Go's built-in operating system interface did not provide such
+details, in an attempt at platform independence.
 
+Also, it would be very useful to include some forms of query optimization. As
+mentioned earlier, queries such as \texttt{//*} are evaluated inefficiently with
+a naive query evaluator, when they could be optimized to a query such as
+\texttt{/descendant::node()}.
+
+\section{Conclusion}
+
+In this paper, we have described the implementation of DPath, an implementation
+of XPath for file system querying. We have found the development to be
+informative and the end result to be a useful tool. The complete source code to
+DPath, along with setup instructions and other documentation, may be found at:
+\url{https://github.com/brenns10/dpath}
 
 \bibliographystyle{ieeetr}
 \bibliography{report}
