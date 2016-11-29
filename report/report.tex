@@ -6,7 +6,7 @@
 \author{Stephen Brennan}
 
 \usepackage[utf8]{inputenc}
-\usepackage[letterpaper, margin=1in]{geometry}
+\usepackage[letterpaper,margin=1in]{geometry}
 \usepackage{listings}
 \usepackage{courier}
 \usepackage{color}
@@ -26,6 +26,8 @@
   keywordstyle=\color{blue},         % keyword
   stringstyle=\color{mymauve},       % string
 }
+
+\pagenumbering{arabic}
 
 \begin{document}
 \maketitle
@@ -75,8 +77,9 @@ that can be used to query and address each part of tree structures \cite{xpath}.
 It achieves this using \emph{path expressions}. For example, the path expression
 \texttt{//Student/Course} describes all \texttt{Course} nodes whose parent is a
 \texttt{Student} node. XPath allows for even more fine-grained queries through
-the use of predicates, as well as several different \emph{axes}. All of these
-concepts will be discussed at length in Section~\ref{sec:xpath}.
+the use of predicates, as well as several different \emph{axes}, which express
+different ``familial'' relationships among nodes. All of these concepts will be
+discussed at length in Section~\ref{sec:xpath}.
 
 Since XPath is a language for querying the XML tree structure, it could also be
 applicable to other tree structures. One common tree structure encountered in
@@ -87,12 +90,13 @@ However, there are some important differences between file systems that should
 be recognized.
 
 \begin{itemize}
-\item Unlike XML, a fully qualified path file path uniquely identifies a file,
+\item Unlike XML, a fully qualified file path uniquely identifies a file,
   whereas a fully qualified tag path in XML may identify a whole set of nodes.
   This is because there may be several sibling tags with the same name in XML.
 \item File systems may contain \emph{links} which point to other parts of the
   system, or even to a parent, creating cycles. For the purpose of this paper,
-  we will ignore these links.
+  we will ignore these links. In our implementation, we use the \texttt{lstat()}
+  system call, which treats links as files and does not follow them.
 \end{itemize}
 
 For this project, we have implemented a tool which evaluates queries in a
@@ -101,7 +105,7 @@ command line, accepts a query as its sole argument, and outputs one result per
 line on standard output. An example query is presented below.
 
 \begin{lstlisting}
-> dpath './.[starts-with(name(.), name(..))]'
+> dpath './*[starts-with(name(.), name(..))]'
 file:/home/stephen/go/src/github.com/brenns10/dpath/dpath.nn.go
 file:/home/stephen/go/src/github.com/brenns10/dpath/dpath.y
 file:/home/stephen/go/src/github.com/brenns10/dpath/dpath
@@ -125,8 +129,8 @@ The XPath language is standardized by the World Wide Web Consortium (W3C), and
 it is embedded within the XQuery and XSLT languages, which are also W3C
 standards \cite{xpath}. In the research and development of DPath, we focused on
 the 2.0 version of the XPath standard. There are several parts to the XPath
-standard: syntax\cite{xpath}, semantics\cite{xpath-semantics}, data
-model\cite{xpath-datamodel}, type system, operators, and built-in function
+standard: syntax\cite{xpath}, semantics\cite{xpath-semantics}, data model, type
+system\cite{xpath-datamodel}, operators, and built-in function
 library\cite{xpath-functions}.
 
 \subsection{Syntax}
@@ -161,8 +165,10 @@ remainder of the name may additionally contain hyphens, periods, or digits, but
 no whitespace.
 
 Whitespace is not significant in XPath, except in a few cases where it separates
-tokens~\cite{xpath}. Otherwise, an expression such as \texttt{Student/Course} is
-equivalent to \texttt{Student / Course}.
+tokens~\cite{xpath}. For example, whitespace is required to separate a QName
+from a numeric literal. Therefore, an expression such as \texttt{Student/Course}
+is equivalent to \texttt{Student / Course}, but \texttt{Student123} is not
+equivalent to \texttt{Student 123} (which is not syntactically valid).
 
 The XPath grammar is familiar to those who have implemented an expression
 language. It resembles a simple expression grammar, with different non-terminals
@@ -177,7 +183,7 @@ Specification~\cite{xpath}.
 XPath is built on some fundamental concepts that should be well understood in
 order to implement it. First, the data model. XPath's data model is made up of
 Items and Sequences~\cite{xpath-datamodel}. An Item is defined as any single
-value, which could be an XML node, or an atomic value such as a number or
+value, which could be an XML element, or an atomic value such as a number or
 string. The types of these items are represented as QNames. There are several
 types defined in the XPath specification, most of which are not relevant to our
 discussion.
@@ -196,7 +202,7 @@ but so are attributes, comments, and text enclosed within an element.
 \subsection{Semantics}
 
 When an XPath expression is evaluated, several pieces of information are known
-by the engine and kept as ``context.'' The pieces of information than are known
+by the engine and kept as ``context.'' The pieces of information that are known
 only during evaluation of an expression are called the ``dynamic context'', and
 are critical for understanding the semantics of path expressions~\cite{xpath}.
 In particular, the dynamic context includes a ``context item'', which is an Item
@@ -209,16 +215,16 @@ semantics of a Path expression. A path expression can be represented as a
 sequence of \emph{steps}. For instance, the path \texttt{Student/Course} has two
 steps, \texttt{Student} and \texttt{Course}. A step is made up of two parts: an
 \emph{axis} and a \emph{test}. The axis can be thought of as the ``direction''
-in which to take a step, \emph{relative to the context object}. The test selects
-certain types or names of nodes from that axis. The axis and test are
-represented together with the syntax \texttt{axis::test}. When the axis is not
-provided, it is assumed to be the child axis. Therefore, the \texttt{Student}
-step will yield a sequence of nodes that are children of the context item and
-have name \texttt{Student}. The subsequent \texttt{Child} step is applied to
-each item yielded by the previous step. That is, for every item in the output of
-the previous step, the context item is set to this item, and the \texttt{Child}
-step is evaluated, yielding nodes which are children of the \texttt{Student}
-node which are also \texttt{Child} nodes. The result of a path expression is a
+in which to take a step, relative to the context object. The test selects
+certain types or names of nodes from the axis. The axis and test are represented
+together with the syntax \texttt{axis::test}. When the axis is not provided, it
+is assumed to be the child axis. Therefore, the \texttt{Student} step will yield
+a sequence of nodes that are children of the context item and have name
+\texttt{Student}. The subsequent \texttt{Child} step is applied to each item
+yielded by the previous step. That is, for every item in the output of the
+previous step, the context item is set to this item, and the \texttt{Child} step
+is evaluated, yielding nodes which are children of the \texttt{Student} node
+which also have the name \texttt{Child}. The result of a path expression is a
 Sequence that contains every result of the last step of the path.
 
 \subsubsection{Axes}
@@ -275,16 +281,17 @@ the current document before evaluating the path. Otherwise, a relative path uses
 the existing context item when evaluating the first step.
 
 \subsubsection{Predicates}
+\label{sec:xpath-predicates}
 
 Any expression returning a sequence, including full path expressions, or steps
 within a path, may be filtered by one or more predicates. Each predicate is an
-expression following the expression to be filtered, enclosed in square brackets.
-The predicate is evaluated once for each item in the sequence. Each time, the
-context item is set to an item from the sequence. If the result of the predicate
-is a singleton numeric, then it is compared against the ``context position''. If
-it is equal, the item is yielded by the predicate, otherwise, it is skipped. If
-the result of the predicate is not a singleton numeric, it is coerced to a
-Boolean, and used similarly to filter the current item.
+expression following a sequence, enclosed in square brackets. The predicate is
+evaluated once for each item in the sequence. Each time, the context item is set
+to an item from the sequence. If the result of the predicate is a singleton
+numeric, then it is compared against the ``context position''. If it is equal,
+the item is yielded by the predicate, otherwise, it is skipped. If the result of
+the predicate is not a singleton numeric, it is coerced to a Boolean. If the
+Boolean is true, the item is yielded by the predicate, otherwise, it is skipped.
 
 \subsubsection{Arithmetic}
 
@@ -295,11 +302,12 @@ comparison operators and boolean operators for complex conditions.
 
 \subsubsection{Comparisons}
 
-Since every XPath expression is a sequence, comparison operations have some
-interesting semantics. There are two sets of comparison operators in XPath. The
-first set are ``Value Comparison'' operators: \texttt{eq, ne, le, lt, ge, gt}.
-They accept only singletons as their operands, and so they compare exactly one
-value against exactly one other value.
+Since the result of every XPath expression is a sequence, comparison operations
+have some interesting semantics. There are two sets of comparison operators in
+XPath. The first set are ``Value Comparison'' operators: \texttt{eq, ne, le, lt,
+  ge, gt}. They accept only singletons as their operands, and so they compare
+exactly one value against exactly one other value. They will raise an error if
+used with anything other than singletons.
 
 The second set of comparison operators is the ``General Comparison'' operators:
 \texttt{=, !=, <=, <, >=, >}. These take any sequence of operands and return
@@ -341,8 +349,9 @@ same as using XPath. Following is a list of deviations DPath makes from XPath.
   in a file system, because no XML is actually involved.
 \item We dramatically simplified the number of types. XPath includes several
   numeric types in various sizes, as well as date and time types, and any
-  user-defined type from XML Schema. DPath includes a 64-bit signed integer
-  type, a double precision floating point type, strings, booleans, and files.
+  user-defined type from XML Schema. DPath simply includes a 64-bit signed
+  integer type, a double precision floating point type, strings, booleans, and
+  files.
 \item We implemented only a subset of the built-in functions (listed later in
   this section).
 \item We did not implement the \texttt{self}, \texttt{preceding},
@@ -353,10 +362,12 @@ same as using XPath. Following is a list of deviations DPath makes from XPath.
   guarantee on what order the axes yield items. As a further result of this,
   without deterministic item ordering, there is no reason to use predicates for
   numeric indexing. Therefore, all predicate expressions are cast to booleans
-  rather than the semantics described in the previous section.
+  rather than the semantics described in Section~\ref{sec:xpath-predicates}.
 \item Since not all file names conform to the limitations of the QName local
   identifier syntax, we introduced a shorthand syntax, \texttt{\#"literal"}
-  which can be used wherever a name test is expected.
+  which can be used wherever a name test is expected. For example,
+  \texttt{\#".git"} can be used to refer to the \texttt{.git} directory, since
+  \texttt{.git} is not a valid QName local identifier.
 \item The only kind tests are \texttt{file()} and \texttt{dir()}.
 \item Some lesser-known parts of XPath were not implemented. We judged that the
   utility they provided to DPath was not worth their implementation effort.
@@ -378,13 +389,15 @@ language which was released open-source by Google in November of
 The scanner is implemented using Nex~\cite{nex}, a Go tool inspired and heavily
 based on the earlier Unix tool Lex~\cite{lex}. This tool takes as input a source
 file (\texttt{dpath.nex}) containing several regular expressions, each one
-defining a token. It produces as output a lexical analyzer in Go which is
-capable of parsing a stream of these tokens and returning them sequentially.
+defining a token. It produces as output a lexical analyzer in Go
+(\texttt{dpath.nn.go}) which is capable of parsing a stream of these tokens and
+returning them sequentially.
 
 The parser is implemented using Go's built-in implementation of the Yacc
-tool~\cite{yacc}. This tool takes as input a source file \texttt{dpath.y}
+tool~\cite{yacc}. This tool takes as input a source file (\texttt{dpath.y})
 containing a grammar, where each production specifies an action to be taken, in
-the form of Go code. It produces as output an LR(1) parser in Go.
+the form of Go code. It produces as output an LR(1) parser in Go
+(\texttt{y.go}).
 
 The generated lexer and parser are accessed from the rest of the code via the
 \texttt{Parse()} function, which takes an input stream and returns either a
@@ -392,12 +405,15 @@ parse tree or an error.
 
 The returned parse tree is an ``interface'' which supports printing (for
 diagnostics) and evaluation. The \texttt{ParseTree} interface has an
-implementation for many different productions in the grammar. For instance, it
-has a \texttt{BinopTree} implementation which represents a binary operator and
-contains a string operator along with two \texttt{ParseTree} operands.
+implementation for many different productions in the grammar. For instance,
+there is an implementation of this interface called \texttt{BinopTree}. This
+implementation represents an element that is a binary operator. It contains the
+operator itself as a string, as well as the left and right hand sides of the
+operator as pointers to other \texttt{ParseTrees}.
 
-Code evaluation is therefore distributed across \texttt{Evaluate()} methods of
-the parse tree objects, which may all be found in \texttt{tree.go}.
+Code evaluation is therefore distributed across the \texttt{Evaluate()} methods
+from each implementation of \texttt{ParseTree}, which may all be found in
+\texttt{tree.go}.
 
 \subsection{Data Model}
 
@@ -409,13 +425,14 @@ as the basic operators.
 Similarly, a \texttt{Sequence} interface is defined in \texttt{sequence.go}
 which supports two major operations: \texttt{Value()}, which returns the current
 value in the sequence, and \texttt{Next()}, which advances the sequence forward
-by one. Several implementations of this interface exist. Some, like the
-\texttt{WrapperSequence}, simply wrap arrays of \texttt{Items}. Others, like
-\texttt{DescendantSequence} and \texttt{RangeSequence}, dynamically produce a
-steady stream of items. Still others, like the \texttt{ExpressionFilter}, wrap
-source sequences and filter out those which don't match a condition. By creating
-and composing sequences, the evaluation functions can produce complex sequences
-that produce desired query results.
+by one. Several implementations of this interface exist. The simplest is the
+\texttt{WrapperSequence}, which simply wraps arrays of \texttt{Items}. Others,
+like \texttt{DescendantSequence} and \texttt{RangeSequence}, dynamically produce
+items as \texttt{Next()} is called. Still others, like
+\texttt{ExpressionFilter}, and \texttt{PathSequence}, take other sequences as
+input and perform operations on them to filter or create new sequences. By
+composing sequences, the evaluation functions can produce complex sequences that
+produce desired query results.
 
 Finally, an important part of the data model is the \texttt{Axis} interface.
 This interface requires two methods: \texttt{GetByName()}, which helps implement
@@ -446,9 +463,10 @@ integers 1 through 10, while the predicate afterward filters it to those which
 are divisible by 2. Thus, the output of this expression should be the sequence
 \texttt{2, 4, 6, 8, 10}.
 
-First, the parser produces the following tree:
+First, the parser produces the parse tree shown in Figure~\ref{fig:pt1}.
 
 \begin{figure}[h]
+\centering
 \Tree [.FilteredSequenceTree
         [.BinopTree [.LiteralTree 1 ]
                     to
@@ -459,6 +477,8 @@ First, the parser produces the following tree:
                     eq
                     [.LiteralTree 0 ]]
 ]
+\caption{Parse tree for \texttt{(1 to 10)[. mod 2 eq 0]}}
+\label{fig:pt1}
 \end{figure}
 
 Next, \texttt{Evaluate()} is called on the \texttt{FilteredSequenceTree}. This
@@ -466,14 +486,14 @@ function first evaluates \texttt{BinopTree} on the left hand side, which returns
 a \texttt{RangeSequence}. The \texttt{RangeSequence} dynamically creates a list
 of numbers from 1 to 10, computing the next one each time \texttt{Next()} is
 called. This \texttt{RangeSequence} is returned back to the
-\texttt{FilteredSequenceTree}, which uses it to create an
-\texttt{ExpressionFilter}. This is another sequence type, which takes a source
-sequence and a list of \texttt{ParseTrees} which are predicates. For each item
-in the source sequence, it sets the context object to that item, evaluates each
+\texttt{FilteredSequenceTree}. From there, an \texttt{ExpressionFilter} is
+created. This is another sequence type, which takes a source sequence (our
+range) and a list of \texttt{ParseTrees} which are predicates. For each item in
+the source sequence, it sets the context object to that item, evaluates each
 predicate, and returns the item if all predicates are true.
 
 So, an \texttt{ExpressionFilter} is returned from the \texttt{Evaluate()}
-function. At this point, the main driver begins calling \texttt{Next()} on the
+function. At this point, the main function begins calling \texttt{Next()} on the
 returned sequence and printing out the results. This causes the
 \texttt{ExpressionFilter} to call \texttt{Next()} on the \texttt{RangeSequence},
 and then filter the results until it finds an item satisfying all predicates,
@@ -482,10 +502,19 @@ which point the \texttt{RangeSequence} runs out.
 
 One important thing to note about this entire process is that not very much
 computation occurs when \texttt{Evaluate()} is called. Instead, sequences are
-constructed that dynamically produce and filter items as they are iterated over.
-This is important, because implementations which load an entire sequence of
-items into memory would fail miserably on large queries, like those involving
-\texttt{descendant-or-self}.
+constructed that dynamically produce and filter items each time \texttt{Next()}
+is called. This is important, because implementations which load an entire
+sequence of items into memory would fail miserably on large queries, like those
+involving \texttt{descendant-or-self}
+\footnote{
+  There is one case where an entire Sequence must be loaded into memory: general
+  comparison operators. Every pair of items must be tested, so the left hand
+  side is loaded into memory before iterating one by one over the right hand
+  side. This is illustrated by the performance difference for the expressions
+  \texttt{(1 to 1000000) = 1} versus \texttt{1 = (1 to 1000000)}. This would
+  also be necessary for the union and intersection operators, should they be
+  implemented.
+}.
 
 \subsubsection{A Filesystem Query}
 
@@ -496,28 +525,34 @@ Next, let us consider the following query.
   .//*
 \end{center}
 
-This query returns all files that are descendants of the current directory. The
-following is the effective parse tree:
+This query returns all files that are descendants of the current directory.
+Figure~\ref{fig:pt2} shows the effective parse tree:
 
 \begin{figure}[h]
+\centering
 \Tree[.PathTree .
                 [.AxisTree \texttt{descendant-or-self}
                            [.NameTree * ]]
                 [.NameTree * ]
 ]
+\caption{Effective parse tree of expression \texttt{.//*}}
+\label{fig:pt2}
 \end{figure}
 
-In order to evaluate this query, an entire system of sequences are created and
-combined. The following tree represents the structure of the system of
-sequences:
+In order to evaluate this query, an entire system of sequences is created and
+combined. The tree in Figure~\ref{fig:seq} represents the structure of the
+system of sequences.
 
-\begin{figure}[h]
+\begin{figure}[h!]
+\centering
 \Tree[.PathSequence [.PathSequence [.WrapperSequence(.) ]
                                    [.ConcatenateSequence
                                        [.WrapperSequence(.) ]
                                        [.DescendantSequence ]]]
                     [.WrapperSequence(*) ]
 ]
+\caption{Sequence diagram of expression \texttt{.//*}}
+\label{fig:seq}
 \end{figure}
 
 The most important sequence to understand is the \texttt{PathSequence}. This
@@ -540,19 +575,21 @@ passed into the parent \texttt{PathSequence}, which evaluates the implicit
 and its descendants, it simply concatenates a sequence containing the current
 context item with a special sequence called \texttt{DescendantSequence}.
 
-The \texttt{DescendantSequence} implements a depth first search. It operates by
-first finding all the children of the current context item (using the
-\texttt{readdir} system call). As it yields these children, it checks them one
-by one to see if they are directories. If they are, they are added to a stack,
-to be expanded later. Once the sequence of children is exhausted,
-\texttt{DescendantSequence} pops a directory off the stack, finds its children,
-and repeats this until its stack is empty.
+The \texttt{DescendantSequence} implements a depth first search. It maintains a
+stack of directories to expand, which is initialized with the current context
+item. It also maintains a list of items to yield, which is initially empty. When
+\texttt{Next()} is called, it yields an item from the yield list, if available.
+This item is pushed onto the expand stack if it is a directory. When no items
+are in the yield list, a directory is popped off the visit stack and its
+contents are read into the yield list. If the visit stack is empty, the end of
+the descendant sequence has been reached.
 
 Finally, this sequence is passed to the outer \texttt{PathSequence}, which
 evaluates the \texttt{*} step for each item returned by it. This involves
 calling \texttt{Iterate()} on the default axis, \texttt{ChildAxis}. This simply
-calls \texttt{readdir} and returns a \texttt{WrapperSequence} of children of the
-context item (or an empty sequence when the context item is a file).
+calls reads the contents of the directory and returns a \texttt{WrapperSequence}
+of children of the context item (or an empty sequence when the context item is a
+file).
 
 It's interesting to note that the output of the first two steps is all
 descendants of the current directory, \emph{including the current directory}.
@@ -648,6 +685,10 @@ Also, it would be very useful to include some forms of query optimization. As
 mentioned earlier, queries such as \texttt{//*} are evaluated inefficiently with
 a naive query evaluator, when they could be optimized to a query such as
 \texttt{/descendant::node()}.
+
+Finally, there are a few portions of the XPath language we did not implement,
+such as for-return expressions, if-conditionals, quantifiers, type casting
+expressions, union, and intersection operators.
 
 \section{Conclusion}
 
