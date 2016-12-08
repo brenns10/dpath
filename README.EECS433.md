@@ -6,16 +6,17 @@ for Filesystems. The report PDF is located in the file:
 
     Brennan.Report.XPathFilesystem.pdf
 
-You may build and run DPath on Mac or Linux (assuming you have Go installed)
-with the following sequence of commands:
+You may build and run DPath on Mac or Linux with the following sequence of
+commands:
 
+-1. Install Go if not already installed: https://golang.org/dl/
 0. `export GPATH=$HOME/go` if you do not have a Go environment set up
 1. `go get` will install dependencies to your Go environment
 2. `go build` will compile DPath. Executable will be simply named `dpath`
 3. `go test` will run unit tests, if you care to run them
 
 A pre-compiled version for 64 bit Linux is included in this submission as
-`dpath.linux`.
+`dpath.linux`. You need not have Go installed to use this binary.
 
 Files
 -----
@@ -59,3 +60,19 @@ The following files are Go code which is *generated*:
     You are welcome to regenerate this file with the command:
 
         go tool yacc dpath.y
+
+Simpler Setup
+-------------
+
+An easier way to run DPath is with:
+
+    # if you don't have GOPATH set
+    export GOPATH=$HOME/go
+    go get github.com/brenns10/dpath
+
+    # if you don't have $GOPATH/bin in your path
+    export PATH=$GOPATH/bin
+    dpath 'query'
+
+However, this will download source files from GitHub rather than using those
+files submitted in this ZIP archive.
