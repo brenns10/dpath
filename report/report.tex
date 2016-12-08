@@ -1,9 +1,8 @@
-\documentclass{scrartcl}
+\documentclass{article}
 
-\title{An XPath Query Evaluator for Filesystems}
-\subtitle{EECS 433 Final Project}
+\title{An XPath Query Evaluator for Filesystems \\ EECS 433 Final Project}
 \date{December 8, 2016}
-\author{Stephen Brennan}
+\author{Stephen Brennan \\ \texttt{smb196@case.edu}}
 
 \usepackage[utf8]{inputenc}
 \usepackage[letterpaper,margin=1in]{geometry}
@@ -422,30 +421,63 @@ interface is defined in \texttt{item.go}. \texttt{Item} has an implementation
 for each of DPath's types. Its implementations must support comparison as well
 as the basic operators.
 
-Similarly, a \texttt{Sequence} interface is defined in \texttt{sequence.go}
-which supports two major operations: \texttt{Value()}, which returns the current
-value in the sequence, and \texttt{Next()}, which advances the sequence forward
-by one. Several implementations of this interface exist. The simplest is the
-\texttt{WrapperSequence}, which simply wraps arrays of \texttt{Items}. Others,
-like \texttt{DescendantSequence} and \texttt{RangeSequence}, dynamically produce
-items as \texttt{Next()} is called. Still others, like
-\texttt{ExpressionFilter}, and \texttt{PathSequence}, take other sequences as
-input and perform operations on them to filter or create new sequences. By
-composing sequences, the evaluation functions can produce complex sequences that
-produce desired query results.
+Another important part of the data model is the \texttt{Axis} interface. This
+interface requires two methods: \texttt{GetByName()}, which helps implement name
+filters in step expressions, and \texttt{Iterate()}, which returns a
+\texttt{Sequence} of nodes related to the current context object through this
+axis. The \texttt{Iterate()} method implements most of the axis operations that
+don't involve name tests.
 
-Finally, an important part of the data model is the \texttt{Axis} interface.
-This interface requires two methods: \texttt{GetByName()}, which helps implement
-name filters in step expressions, and \texttt{Iterate()}, which returns a
-\texttt{Sequence} and helps implement most of the step expressions that do not
-involve a name filter.
+However, the most important interface of all is the \texttt{Sequence} interface.
+Defined in \texttt{sequence.go}, it supports two major operations.
+\texttt{Value()} returns the current value ``pointed at'' by the sequence.
+\texttt{Next()} attempts to advance the sequence forward by one, returning true
+when there are more items, or false when none remain in the sequence. There are
+several implementations of the \texttt{Sequence} interface, ranging from simple
+lists to complex operations. Most path queries are evaluated by composing
+sequences, so it is very important to understand them. Therefore, a list of
+sequences implementations in DPath is presented below.
+
+\begin{itemize}
+\item \texttt{WrapperSequence} is the simplest sequence type. It contains a list
+  of items (computed ahead of time), and returns them one by one as
+  \texttt{Next()} is called. This sequence can be used with empty lists and
+  singleton lists, and so it is used by much of the arithmetic evaluation code.
+\item \texttt{RangeSequence} is a numeric sequence, which takes an initial and
+  final value. Each time \texttt{Next()} is called, the current value is
+  incremented. When the current value reaches the final one, the sequence stops
+  yielding items. This is used to implement XPath numeric ranges (section 3.3.1
+  of \cite{xpath})
+\item \texttt{ExpressionFilter} is a complex filter which takes as input a
+  ``source'' sequence and a list of parsed predicate expressions. The
+  \texttt{ExpressionFilter} \emph{wraps} its source sequence. Each time
+  \texttt{Next()} is called, it calls \texttt{Next()} on the underlying sequence
+  to get an item. It sets this as the context item and evaluates each
+  expression. If any of the predicates fail, it continues this process until it
+  finds an item from its source sequence that satisfies all predicates.
+  Therefore, \texttt{ExpressionFilter} filters a source sequence by applying
+  predicates.
+\item \texttt{ConditionFilter} is similar to the \texttt{ExpressionFilter}, but
+  instead of filtering by XPath expressions, it filters by an arbitrary Go
+  function. This is useful for some specialized operations.
+\item \texttt{PathSequence} is possibly the most important part of DPath. It
+  implements the heart of the language: a step in a path expression. To do this,
+  it takes as input a sequence (the output from the previous step) and an
+  expression (the current step). For each item in the sequence, it evaluates the
+  expression and yields items from the resulting sequence.
+\item \texttt{DescendantSequence} implements the task of iterating over the
+  descendant axis. It does this by performing a depth first search of the
+  filesystem starting at the current directory. When \texttt{Next()} is called,
+  it pops a directory from the stack, performs the \texttt{readdir()} system
+  call, and yields files and directories from the resulting list. As it yields,
+  it pushes children onto the stack, so that once the current directory is
+  yielded, a new one is available to explore on the stack.
+\end{itemize}
 
 \subsection{Example Queries}
 
-Rather than listing and explaining each the implemented axes, sequences, and
-items, it would be most illustrative to give a few sample queries, walking
-through the evaluation process for each of them. While this is not exhaustive,
-it is more useful for understanding the inner workings of the query engine.
+Following are a few sample queries that illustrate how query evaluation works in
+DPath.
 
 \subsubsection{A Simple Example}
 
@@ -526,7 +558,7 @@ Next, let us consider the following query.
 \end{center}
 
 This query returns all files that are descendants of the current directory.
-Figure~\ref{fig:pt2} shows the effective parse tree:
+Figure~\ref{fig:pt2} shows the effective parse tree.
 
 \begin{figure}[h]
 \centering
@@ -555,16 +587,6 @@ system of sequences.
 \label{fig:seq}
 \end{figure}
 
-The most important sequence to understand is the \texttt{PathSequence}. This
-sequence is used to evaluate any path that has multiple steps. It takes as input
-a source sequence, which is the result of evaluating the previous step. It also
-takes as input the \texttt{ParseTree} of the current step. For each item from
-the input sequence, it sets the current context to that item and evaluates the
-parse tree on that item. It then yields items from the resulting sequence. When
-that sequence runs out, it requests a new item from the source, evaluates the
-expression again, and continues until no more items are yielded from the source
-sequence.
-
 We see that the first sequence created (at the lower left) is a
 \texttt{WrapperSequence}, which wraps a list of exactly one item, the context
 item. In this case, the context item is the current directory. This item is
@@ -573,16 +595,7 @@ passed into the parent \texttt{PathSequence}, which evaluates the implicit
 \texttt{Iterate()} on the \texttt{DescendantOrSelfAxis}. Since the
 \texttt{descendant-or-self} axis is a combination of the current context item
 and its descendants, it simply concatenates a sequence containing the current
-context item with a special sequence called \texttt{DescendantSequence}.
-
-The \texttt{DescendantSequence} implements a depth first search. It maintains a
-stack of directories to expand, which is initialized with the current context
-item. It also maintains a list of items to yield, which is initially empty. When
-\texttt{Next()} is called, it yields an item from the yield list, if available.
-This item is pushed onto the expand stack if it is a directory. When no items
-are in the yield list, a directory is popped off the visit stack and its
-contents are read into the yield list. If the visit stack is empty, the end of
-the descendant sequence has been reached.
+context item with the \texttt{DescendantSequence}.
 
 Finally, this sequence is passed to the outer \texttt{PathSequence}, which
 evaluates the \texttt{*} step for each item returned by it. This involves
