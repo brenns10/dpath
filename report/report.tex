@@ -72,13 +72,14 @@ Tags can contain textual data as well as other tags:
 \end{lstlisting}
 
 XML tags, attributes, and data form a tree structure. XPath is a query language
-that can be used to query and address each part of tree structures \cite{xpath}.
-It achieves this using \emph{path expressions}. For example, the path expression
+that can be used to query and address each part of the XML tree \cite{xpath}. It
+achieves this using \emph{path expressions}. For example, the path expression
 \texttt{//Student/Course} describes all \texttt{Course} nodes whose parent is a
 \texttt{Student} node. XPath allows for even more fine-grained queries through
 the use of predicates, as well as several different \emph{axes}, which express
-different ``familial'' relationships among nodes. All of these concepts will be
-discussed at length in Section~\ref{sec:xpath}.
+different ``familial'' relationships among nodes, including ascendant and
+descendant relations. All of these concepts will be discussed at length in
+Section~\ref{sec:xpath}.
 
 Since XPath is a language for querying the XML tree structure, it could also be
 applicable to other tree structures. One common tree structure encountered in
@@ -94,14 +95,18 @@ be recognized.
   This is because there may be several sibling tags with the same name in XML.
 \item File systems may contain \emph{links} which point to other parts of the
   system, or even to a parent, creating cycles. For the purpose of this paper,
-  we will ignore these links. In our implementation, we use the \texttt{lstat()}
+  we will ignore these links. In this project, we use the \texttt{lstat()}
   system call, which treats links as files and does not follow them.
 \end{itemize}
 
-For this project, we have implemented a tool which evaluates queries in a
-language nearly identical to XPath, called DPath. This tool runs from the
-command line, accepts a query as its sole argument, and outputs one result per
-line on standard output. An example query is presented below.
+\subsection{Problem Definition}
+
+For this project, our goal was to implement a tool which evaluates XPath queries
+on the filesystem. We have achieved this goal. Our contribution is a program
+which evaluates filesystem queries in a language nearly identical to XPath,
+called DPath. This tool runs from the command line, accepts a query as its sole
+argument, and outputs one result per line on standard output. An example query
+is presented below.
 
 \begin{lstlisting}
 > dpath './*[starts-with(name(.), name(..))]'
@@ -196,7 +201,8 @@ XPath expression returns a Sequence.
 XPath represents XML documents with a tree of nodes (each of which is an Item)
 that must be constructed prior to evaluating a path expression. This parsed
 document tree includes nearly every part of the document. Elements are nodes,
-but so are attributes, comments, and text enclosed within an element.
+but so are attributes, comments, and text enclosed within an
+element~\cite{xpath-datamodel}.
 
 \subsection{Semantics}
 
@@ -243,7 +249,7 @@ the context item. XPath additionally defines a \texttt{self} axis as well as
 \texttt{following}, \texttt{following-sibling}, \texttt{preceding}, and
 \texttt{preceding-sibling}, which are less relevant to our upcoming discussion
 on DPath. Finally, the \texttt{attribute} axis yields attributes of the context
-element.
+element.~\cite{xpath}
 
 One important notion XPath has is ``document order.'' That is, nodes can be
 ordered according to when they occur in the document. All of the axes are
@@ -354,8 +360,9 @@ same as using XPath. Following is a list of deviations DPath makes from XPath.
 \item We implemented only a subset of the built-in functions (listed later in
   this section).
 \item We did not implement the \texttt{self}, \texttt{preceding},
-  \texttt{preceding-sibling}, \texttt{following}, and \texttt{following-sibling}
-  axes. These do not have obvious places in directory querying.
+  \texttt{preceding-sibling}, \texttt{following}, and
+  \texttt{following\-sibling} axes. These do not have obvious places in
+  directory querying.
 \item Since file systems have no equivalent to document ordering, we discarded
   the distinction between forward and reverse axes, and do not provide any
   guarantee on what order the axes yield items. As a further result of this,
@@ -426,7 +433,9 @@ interface requires two methods: \texttt{GetByName()}, which helps implement name
 filters in step expressions, and \texttt{Iterate()}, which returns a
 \texttt{Sequence} of nodes related to the current context object through this
 axis. The \texttt{Iterate()} method implements most of the axis operations that
-don't involve name tests.
+don't involve name tests. \texttt{Axis} has implementations for the child,
+parent, descendant, ancestor, descendant or self, and ancestor or self axes.
+These implementations may all be found in \texttt{axis.go}.
 
 However, the most important interface of all is the \texttt{Sequence} interface.
 Defined in \texttt{sequence.go}, it supports two major operations.
@@ -453,7 +462,7 @@ sequences implementations in DPath is presented below.
   \texttt{ExpressionFilter} \emph{wraps} its source sequence. Each time
   \texttt{Next()} is called, it calls \texttt{Next()} on the underlying sequence
   to get an item. It sets this as the context item and evaluates each
-  expression. If any of the predicates fail, it continues this process until it
+  expression. If any of the predicates fail, it repeats this process until it
   finds an item from its source sequence that satisfies all predicates.
   Therefore, \texttt{ExpressionFilter} filters a source sequence by applying
   predicates.
@@ -461,10 +470,10 @@ sequences implementations in DPath is presented below.
   instead of filtering by XPath expressions, it filters by an arbitrary Go
   function. This is useful for some specialized operations.
 \item \texttt{PathSequence} is possibly the most important part of DPath. It
-  implements the heart of the language: a step in a path expression. To do this,
-  it takes as input a sequence (the output from the previous step) and an
-  expression (the current step). For each item in the sequence, it evaluates the
-  expression and yields items from the resulting sequence.
+  implements the heart of the language: a single step from a path expression. To
+  do this, it takes as input a sequence (the output from the previous step) and
+  an expression (the current step). For each item in the sequence, it evaluates
+  the expression and yields items from the resulting sequence.
 \item \texttt{DescendantSequence} implements the task of iterating over the
   descendant axis. It does this by performing a depth first search of the
   filesystem starting at the current directory. When \texttt{Next()} is called,
@@ -600,8 +609,8 @@ context item with the \texttt{DescendantSequence}.
 Finally, this sequence is passed to the outer \texttt{PathSequence}, which
 evaluates the \texttt{*} step for each item returned by it. This involves
 calling \texttt{Iterate()} on the default axis, \texttt{ChildAxis}. This simply
-calls reads the contents of the directory and returns a \texttt{WrapperSequence}
-of children of the context item (or an empty sequence when the context item is a
+reads the contents of the directory and returns a \texttt{WrapperSequence} of
+children of the context item (or an empty sequence when the context item is a
 file).
 
 It's interesting to note that the output of the first two steps is all
@@ -652,6 +661,56 @@ bytes.
 \section{Related Work}
 \label{sec:related}
 
+\subsection{XPath Query Evaluation}
+
+The current state of XPath query evaluation resembles that of regular expression
+evaluation. Regular expressions have a well-established theory and require only
+time linear in the length of their input in order to decide whether an input
+string is matched. However, most popular standard implementations of regular
+expressions (such as those present in Java, Python, Perl, PHP, Ruby, and others,
+but not Go, and therefore not DPath) use greedy ``backtracking'' algorithms that
+have a worst-case exponential runtime \cite{rsc}. These backtracking algorithms
+are based on a semantic understanding of regular expressions, rather than the
+theory of finite automata.
+
+XPath queries do not have quite the same body of well-established theory, but
+Gottlob \emph{et~al.}\ have demonstrated that the XPath query evaluation problem
+can be solved in low-degree polynomial time~\cite{gottlob2005}. This polynomial
+is in both the size of the input document and the query. Additionally, they have
+given several subsets of XPath which have lower complexity, and algorithms which
+can evaluate queries from these subsets
+efficiently~\cite{gottlob2003,gottlob2005}.
+
+Despite these findings, Gottlob \emph{et~al.}\ demonstrated that many mainstream
+XPath implementations have runtime that is exponential in query size, even two
+years after their initial findings~\cite{gottlob2005}. They conjecture that this
+is because most implementations are motivated by the semantics described in the
+XPath specification, which leads implementors to an exponential-time algorithm.
+This is the same approach we have taken in DPath, and thus our implementation
+also has a time complexity that is exponential in the worst case. This can
+easily be demonstrated with the following sequence of DPath queries, each of
+which runs progressively slower (adapted from the experiments
+in~\cite{gottlob2005}):
+
+\begin{lstlisting}
+> dpath '*'
+> dpath '*[count(../*) > 1]'
+> dpath '*[count(../*[count(../*) > 1]) > 1]
+> dpath '*[count(../*[count(../*[count(../*) > 1]) > 1]) > 1]
+\end{lstlisting}
+
+Unfortunately, efficient algorithms for XPath (such as those proposed by Gottlob
+\emph{et~al.}) generally expect an indexed list of nodes
+available~\cite{gottlob2005}. In the filesystem, nodes are discovered by the
+\texttt{readdir()} system call, which costs a system call and potentially a disk
+seek. As a result, the more efficient algorithms are not easily used without a
+system for creating and maintaining filesystem indices. Additionally, for
+queries which involve searching the whole file system for a descendant (e.g.
+\texttt{//document.tex}), DPath will inherently be slow because it cannot use an
+index to limit the search, and will instead traverse the whole filesystem.
+
+\subsection{Filesystem Querying}
+
 A discussion of file system querying would not be complete without mentioning
 the GNU Findutils~\cite{find}. This is a collection of file search programs
 (\texttt{find}, \texttt{locate}, \texttt{xargs}, and \texttt{updatedb}) which
@@ -676,40 +735,67 @@ important because, during file system searches, the limiting factor is
 frequently not the speed of the query evaluator, but rather the number of times
 the disk is accessed for file system calls such as \texttt{readdir()} and
 \texttt{stat()}. File system indices can reduce or eliminate these system calls,
-but require regular updates (similar to database indices).
+but require regular updates (similar to database indices). Unfortunately, the
+filesystem index must be manually updated by the user~\cite{find}. Unless the
+user is knowledgeable enough about their system to know that (a) indices would
+be useful, and (b) how to schedule a job for their maintenance, they cannot take
+advantage of the indexing performance boost.
 
-Another important thing to note is that DPath is not a novel invention. We were
-able to find at least one other implementation of XPath on the file system on
-the Internet~\cite{other}. In fact, this implementation was integrated with the
-GNU \texttt{find} tool, although it required extensive modifications in order to
-run. This implementation exposed more file attributes to the system and included
-a maximum depth option, and it relied on a pre-made XPath library rather than
-implementing its own.
+\subsection{XPath Over Filesystem}
+
+DPath is not a novel invention. We were able to find at least two other
+implementations of XPath on the file system on the Internet.
+
+The first implementation we found is a modification of the GNU \texttt{find}
+tool~\cite{other}. However, it required some non-trivial modifications to the
+build process, as well as manual steps, in order to compile correctly. This
+implementation exposed more file attributes to the system and included a maximum
+depth option, and it relied on a pre-made XPath library rather than implementing
+its own.
+
+The second implementation, called FOXPath, is an extension to XPath rather than
+a separate language unrelated to XML~\cite{foxpath}. As such, FOXPath allows
+users to query filesystems containing XML files in a way that uses their
+contents. It is based on XPath 3.0, while DPath is based on XPath 2.0. One major
+limitation to FOXPath is that it introduces a rather complex, context-dependent
+syntax for escaping file names which are not syntactically valid QNames. It is
+also based on an existing XML library, unlike DPath.
 
 \section{Future Work}
 \label{sec:future}
 
-There are several opportunities for improving DPath in the future. First, it
-would be beneficial to include more filesystem metadata in the attribute axis of
-files. However, Go's built-in operating system interface did not provide such
-details, in an attempt at platform independence.
+Potentially the greatest potential improvement of DPath would be filesystem
+indexing. In particular, DPath could make use of the indices created by the
+\texttt{find} utility, and use these to speed up the evaluation of (at least)
+rooted descendant queries (such as \texttt{//file.txt}).
 
-Also, it would be very useful to include some forms of query optimization. As
-mentioned earlier, queries such as \texttt{//*} are evaluated inefficiently with
-a naive query evaluator, when they could be optimized to a query such as
-\texttt{/descendant::node()}.
+Additionally, it would be beneficial to include more filesystem metadata in the
+attribute axis of files. However, Go's built-in operating system interface did
+not provide such details, in an attempt at platform independence. (In fact,
+DPath is at least compatible with Mac OS and Linux. In theory, Go works on
+Windows as well, but we have not tested DPath on that system).
+
+Another avenue for improvement is to add query optimization. As mentioned
+earlier, queries such as \texttt{//*} are evaluated inefficiently with our query
+evaluator. Instead, this query could be translated to an equivalent query such
+as \texttt{/descendant::node()}, which is more efficiently evaluated by DPath.
+Another opportunity for optimization would be caching filesystem reads and
+writes so as to avoid unnecessary system calls.
 
 Finally, there are a few portions of the XPath language we did not implement,
 such as for-return expressions, if-conditionals, quantifiers, type casting
-expressions, union, and intersection operators.
+expressions, union, and intersection operators. Although these did not seem
+particularly significant for the utility of a directory query language,
+implementing them would make DPath more ``feature complete'' as an XPath-like
+language.
 
 \section{Conclusion}
 
-In this paper, we have described the implementation of DPath, an implementation
-of XPath for file system querying. We have found the development to be
-informative and the end result to be a useful tool. The complete source code to
-DPath, along with setup instructions and other documentation, may be found at:
-\url{https://github.com/brenns10/dpath}
+In this project, we have described the implementation of DPath, an
+implementation of XPath for file system querying. We have found the development
+to be informative and the end result to be a useful tool. The complete source
+code to DPath, along with setup instructions and other documentation, may be
+found at: \url{https://github.com/brenns10/dpath}
 
 \bibliographystyle{ieeetr}
 \bibliography{report}
