@@ -1,7 +1,7 @@
 DPath
 =====
 
-DPath is a work-in-progress project for my EECS 433 Databases course. It is an
+DPath is a completed project for my EECS 433 Databases course. It is an
 implementation of an XQuery-like language for file system queries. For example,
 the DPath query below would match every PNG file in the current directory tree:
 
